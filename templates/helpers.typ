@@ -48,21 +48,23 @@
   let cols = gallery.at("columns", default: 2)
   let imgs = gallery.images
   v(0.8em)
-  grid(
-    columns: cols,
-    gutter: 6pt,
-    ..imgs.map(img => {
-      let local = img.at("_local", default: img.path)
-      image(local, width: 100%)
-    })
-  )
-  if gallery.caption != "" {
-    v(0.3em)
-    align(center)[
-      #set text(size: 0.85em, fill: luma(100))
-      #gallery.caption
-    ]
-  }
+  block(breakable: false)[
+    #grid(
+      columns: cols,
+      gutter: 6pt,
+      ..imgs.map(img => {
+        let local = img.at("_local", default: img.path)
+        image(local, width: 100%)
+      })
+    )
+    #if gallery.caption != "" {
+      v(0.3em)
+      align(center)[
+        #set text(size: 0.85em, fill: luma(100))
+        #gallery.caption
+      ]
+    }
+  ]
   v(0.8em)
 }
 

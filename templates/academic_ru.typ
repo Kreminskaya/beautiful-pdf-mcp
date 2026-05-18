@@ -1,4 +1,5 @@
 // Academic RU template — ГОСТ 7.32, 14pt, 1.5x leading, 30/15/20/20 margins
+// ГОСТ 7.32: все иллюстрации — по центру, подпись под рисунком. Обтекание текстом не применяется.
 #import "helpers.typ": callout-box, render-table, render-code, render-gallery
 
 #let doc = json("assets/content.json")
@@ -62,8 +63,8 @@
 #show heading.where(level: 1): it => {
   v(1.8em)
   align(center)[
-    set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color)
-    upper(it.body)
+    #set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color)
+    #upper(it.body)
   ]
   v(0.8em)
 }
@@ -117,14 +118,16 @@
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
-  eval(section.content.replace("#", "\\#").replace("\\#link(", "#link("), mode: "markup")
+  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(")
+  eval(safe-content, mode: "markup")
 
+  // ГОСТ 7.32: все изображения по центру, подпись под рисунком. Обтекание не применяется.
   for img in section.images {
     v(1.0em)
-    let w = img.at("width", default: "100%")
+    let w = img.at("width", default: "80%")
     figure(
       image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
-      caption: if img.caption != "" { [#img.caption] } else { none },
+      caption: if img.at("caption", default: "") != "" { [#img.caption] } else { none },
       supplement: [Рисунок],
     )
     v(0.8em)

@@ -95,12 +95,13 @@ Restart Claude Desktop. You should see 10 new tools starting with `beautiful-pdf
 ## Usage
 
 ```python
-# Create a document
+# Create a document — optionally override any typographic parameter
 doc = create_document(
     title="Q2 2025 Report",
     author="Natalie",
     template="report",
-    language="en"
+    language="en",
+    preset_overrides={"accent_color": "#e63946"}  # custom red accent
 )
 doc_id = doc["doc_id"]
 
@@ -114,10 +115,20 @@ add_table(doc_id, s2["section_id"],
     rows=[["EMEA", "$4.2M", "+18%"], ["APAC", "$3.1M", "+31%"]],
     caption="Q2 revenue by region"
 )
+
+# Standard centered image (default)
 add_image(doc_id, s2["section_id"],
     path="/path/to/chart.png",
     caption="Figure 1. Revenue trend",
-    width="large"
+    width="80%"
+)
+
+# Magazine wrap — text flows around the image (report/book/technical/portfolio/letter)
+add_image(doc_id, s2["section_id"],
+    path="/path/to/portrait.png",
+    caption="Portrait",
+    width="35%",
+    position="right-wrap"   # or "left-wrap"
 )
 
 # Gallery: distribute multiple images in a grid
@@ -137,6 +148,16 @@ save_document(doc_id, "~/Desktop/report.json")
 # Compile final PDF
 pdf = compile_pdf(doc_id, output_path="~/Desktop/report.pdf")
 ```
+
+## Image positioning
+
+| `position` value | Behaviour | Templates |
+|---|---|---|
+| `"center"` (default) | Full-width centered figure | all |
+| `"left-wrap"` | Text wraps right of image | report, book, technical, portfolio, letter |
+| `"right-wrap"` | Text wraps left of image | report, book, technical, portfolio, letter |
+
+`academic_ru` always places images centered regardless of `position` — GOST 7.32 does not allow text wrap around figures.
 
 ## Fonts
 

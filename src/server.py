@@ -197,15 +197,24 @@ def create_document(
     author: str = "",
     template: str = "report",
     language: str = "ru",
+    preset_overrides: dict | None = None,
 ) -> dict:
     """Create a new document. Returns doc_id.
 
     template: report | academic_ru | book | technical | portfolio | letter
     language: ru | en
+    preset_overrides: optional dict to customise any typographic parameter, e.g.:
+      {"accent_color": "#e63946", "body_font": "PT Serif", "show_toc": false}
+    Overridable keys: accent_color, heading_color, muted_color, body_color,
+      body_font, heading_font, mono_font, text_size, h1_size, h2_size, h3_size,
+      margin_left, margin_right, margin_top, margin_bottom, leading,
+      show_toc, show_header_footer, numbered_headings.
     """
     doc_id = str(uuid.uuid4())[:8]
     work_dir = Path(tempfile.mkdtemp(prefix=f"pdf_{doc_id}_"))
     preset = _load_preset(template)
+    if preset_overrides:
+        preset.update(preset_overrides)
 
     _docs[doc_id] = {
         "doc_id": doc_id,

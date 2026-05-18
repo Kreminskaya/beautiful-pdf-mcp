@@ -1,5 +1,6 @@
 // Report template — professional business/academic report
 #import "helpers.typ": callout-box, render-table, render-code, render-gallery
+#import "@preview/wrap-it:0.1.1": wrap-content
 
 #let doc = json("assets/content.json")
 #let p = doc.at("preset", default: (:))
@@ -123,9 +124,46 @@
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
-  eval(section.content.replace("#", "\\#").replace("\\#link(", "#link("), mode: "markup")
+  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(")
+  let body = eval(safe-content, mode: "markup")
 
-  for img in section.images {
+  // Separate wrap-images from standard ones
+  let wrap-imgs = section.images.filter(img =>
+    img.at("position", default: "center") in ("left-wrap", "right-wrap")
+  )
+  let std-imgs = section.images.filter(img =>
+    img.at("position", default: "center") not in ("left-wrap", "right-wrap")
+  )
+
+  if wrap-imgs.len() > 0 {
+    let wi = wrap-imgs.first()
+    let w  = wi.at("width", default: "40%")
+    let side = if wi.at("position", default: "center") == "left-wrap" { left } else { right }
+    let fig = figure(
+      image(wi.at("_local", default: wi.path), width: eval(w, mode: "code")),
+      caption: if wi.at("caption", default: "") != "" { [#wi.caption] } else { none },
+      supplement: none,
+    )
+    wrap-content(fig, body, align: side + top, column-gutter: 1.5em)
+    // Any additional wrap-images are placed inline after
+    for wi2 in wrap-imgs.slice(1) {
+      let w2   = wi2.at("width", default: "40%")
+      let side2 = if wi2.at("position", default: "center") == "left-wrap" { left } else { right }
+      v(0.8em)
+      align(side2)[
+        #figure(
+          image(wi2.at("_local", default: wi2.path), width: eval(w2, mode: "code")),
+          caption: if wi2.at("caption", default: "") != "" { [#wi2.caption] } else { none },
+          supplement: none,
+        )
+      ]
+    }
+  } else {
+    body
+  }
+
+  // Standard (centered / full-width) images
+  for img in std-imgs {
     v(0.9em)
     let w = img.at("width", default: "100%")
     figure(
