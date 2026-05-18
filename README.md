@@ -64,9 +64,13 @@ Verify Typst is available:
 typst --version  # should print 0.12.0 or higher
 ```
 
-## Claude Desktop config
+## MCP configuration
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Replace `/absolute/path/to/beautiful-pdf-mcp` with the real path to the cloned repo.
+
+### Claude Desktop
+
+`~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -79,7 +83,26 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Restart Claude Desktop. You should see 10 new tools starting with `beautiful-pdf__`.
+Restart Claude Desktop. You should see the tools listed below starting with `beautiful-pdf__`.
+
+### Cursor
+
+`~/.cursor/mcp.json` (or **Cursor → Settings → MCP → Add server**):
+
+```json
+{
+  "mcpServers": {
+    "beautiful-pdf": {
+      "command": "python3",
+      "args": ["/absolute/path/to/beautiful-pdf-mcp/src/server.py"]
+    }
+  }
+}
+```
+
+### Any other MCP-compatible agent
+
+Same JSON block — works with any client that supports the MCP stdio transport.
 
 ## Tools
 
