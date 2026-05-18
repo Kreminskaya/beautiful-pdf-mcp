@@ -1,4 +1,52 @@
-"""Beautiful PDF MCP Server — generates typographically clean PDFs via Typst."""
+"""Beautiful PDF MCP — generates typographically clean PDFs via Typst.
+
+AGENT WORKFLOW
+--------------
+1. create_document  — pick a template, get doc_id
+2. add_section      — add sections with Markdown text (repeat as needed)
+3. add_image / add_table / add_code_block / add_callout / add_gallery — enrich sections
+4. compile_preview  — render page 1 as PNG, open it to verify layout
+5. fix if needed    — update_section / remove_section
+6. compile_pdf      — produce the final PDF, copy to destination
+7. save_document    — ALWAYS save after compile so the user can reload later
+
+TEMPLATE GUIDE
+--------------
+report       — business report / analytics. Navy accent, Source Serif 4 body,
+               numbered headings, TOC, header+footer. Images centered by default;
+               use position="right-wrap" / "left-wrap" for editorial wrap.
+academic_ru  — Russian academic paper, GOST 7.32. PT Serif 14pt, 1.5× leading,
+               wide left margin (30 mm), centered page numbers. ALL images are
+               centered (GOST requirement, wrap is ignored). Callouts render
+               without color. Supports #footnote[text] inline for real footnotes
+               at the bottom of the page.
+book         — long-form non-fiction. A5, Van de Graaf margins, PT Serif,
+               chapter breaks, running headers.
+technical    — API docs / developer guides. IBM Plex Sans, left-aligned text,
+               numbered headings, syntax-highlighted code blocks.
+portfolio    — visual showcase. Dark cover page, Noto Sans, violet accent,
+               image-forward layout.
+letter       — formal correspondence. DIN 5008 style, Source Sans 3,
+               no page numbers, compact margins.
+journal      — editorial / magazine. Images auto-wrap by default
+               (even sections → right, odd → left). Golden beige accent.
+               Use position="center" to force a standalone figure.
+
+IMAGE POSITION VALUES
+---------------------
+center      — standalone centered figure (default, all templates)
+right-wrap  — text wraps to the LEFT of the image (report/book/technical/portfolio/letter/journal)
+left-wrap   — text wraps to the RIGHT of the image (same templates)
+In academic_ru all images are centered regardless of position.
+
+CALLOUT KINDS: info | warning | tip | danger | quote
+In academic_ru callouts render as plain grey-bordered blocks (GOST: no color).
+
+FOOTNOTES (academic_ru and all templates)
+-----------------------------------------
+Write #footnote[explanation text] inline in section content to get a proper
+footnote number in the text and the note at the bottom of the page.
+"""
 
 import json
 import re
@@ -199,16 +247,30 @@ def create_document(
     language: str = "ru",
     preset_overrides: dict | None = None,
 ) -> dict:
-    """Create a new document. Returns doc_id.
+    """Create a new document and return its doc_id. Always the first call.
 
-    template: report | academic_ru | book | technical | portfolio | letter | journal
-    language: ru | en
-    preset_overrides: optional dict to customise any typographic parameter, e.g.:
-      {"accent_color": "#e63946", "body_font": "PT Serif", "show_toc": false}
-    Overridable keys: accent_color, heading_color, muted_color, body_color,
-      body_font, heading_font, mono_font, text_size, h1_size, h2_size, h3_size,
-      margin_left, margin_right, margin_top, margin_bottom, leading,
-      show_toc, show_header_footer, numbered_headings.
+    template choices:
+      report      — business/analytics report (default)
+      academic_ru — Russian academic paper, GOST 7.32 compliant
+      book        — long-form non-fiction, A5
+      technical   — API docs, developer guides
+      portfolio   — visual showcase with dark cover
+      letter      — formal correspondence
+      journal     — editorial/magazine with auto image wrap
+
+    language: "ru" or "en" — affects hyphenation and TOC heading language
+
+    preset_overrides: override any typographic setting for this document only.
+      Common uses:
+        {"accent_color": "#2a9d8f"}          — custom brand colour (hex)
+        {"show_toc": False}                  — disable table of contents
+        {"body_font": "PT Serif"}            — override body font
+        {"margin_left": "3.5cm"}             — wider left margin
+        {"numbered_headings": False}         — remove heading numbers
+      Full list of keys: accent_color, heading_color, muted_color, body_color,
+        body_font, heading_font, mono_font, text_size, h1_size, h2_size, h3_size,
+        margin_left, margin_right, margin_top, margin_bottom, leading,
+        show_toc, show_header_footer, numbered_headings.
     """
     doc_id = str(uuid.uuid4())[:8]
     work_dir = Path(tempfile.mkdtemp(prefix=f"pdf_{doc_id}_"))
@@ -238,10 +300,15 @@ def add_section(
     level: int = 1,
     numbered: bool = True,
 ) -> dict:
-    """Add a section with Markdown content.
+    """Add a section to the document. Returns section_id needed for add_image etc.
 
-    level: 1=chapter, 2=section, 3=subsection
-    content: Markdown text (bold, italic, inline code, links supported)
+    title: section heading text
+    level: 1 = chapter/major section, 2 = subsection, 3 = minor subsection
+    content: body text in Markdown.
+      Supported: **bold**, *italic*, `inline code`, [link text](url)
+      Academic footnotes: write #footnote[note text] inline — renders as
+        a superscript number in the text and a footnote at the bottom of the page.
+      For multi-paragraph content use \\n\\n between paragraphs.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -270,9 +337,10 @@ def update_section(
     title: str = "",
     content: str = "",
 ) -> dict:
-    """Update the title or content of an existing section.
+    """Update the title or content of an existing section. Pass only the fields to change.
 
-    Pass only the fields you want to change.
+    Useful for fixing text after compile_preview reveals a problem.
+    After updating, call compile_preview again to verify.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -310,9 +378,24 @@ def add_image(
 ) -> dict:
     """Add an image to a section.
 
-    path: absolute path to image file (PNG, JPG, SVG)
-    width: full | half | third | quarter | large | "80%"
-    position: center | left | right
+    path: absolute path to image file (PNG, JPG, SVG, PDF page)
+    caption: figure caption shown below the image
+
+    width: controls how wide the image is on the page
+      "full"    = 100% of text width (default for large diagrams/charts)
+      "large"   = 80%  (good default for most images)
+      "half"    = 50%
+      "third"   = 33%
+      "quarter" = 25%
+      Or pass an explicit percentage string: "65%"
+
+    position: controls placement relative to surrounding text
+      "center"     — standalone figure, full-width block (default, safe for all templates)
+      "right-wrap" — image floats RIGHT, text wraps to the LEFT of it
+      "left-wrap"  — image floats LEFT, text wraps to the RIGHT of it
+      Note: wrap positions are ignored in academic_ru (GOST requires centered figures).
+      For journal template, images wrap automatically even without setting position.
+      Wrap works best with width 30–45% and a section with at least 3–4 lines of text.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -352,14 +435,15 @@ def add_gallery(
     columns: int = 2,
     caption: str = "",
 ) -> dict:
-    """Add a grid of images to a section — the images are distributed evenly across columns.
+    """Add a grid gallery of images to a section. Images are evenly distributed across columns.
 
-    paths: list of absolute paths to image files (PNG, JPG, SVG)
-    columns: number of columns in the grid (1–4)
-    caption: optional caption for the whole gallery
+    paths: list of absolute paths to image files (PNG, JPG, SVG) — 2 or more
+    columns: 2 (default) | 3 | 4  — number of grid columns
+    caption: optional caption for the whole gallery block
 
-    Use this instead of multiple add_image calls when you have 3+ images
-    that should be displayed together (portfolio work, photo sets, comparisons).
+    Use add_gallery instead of multiple add_image calls when you have 2+ images
+    that belong together: portfolio work samples, before/after comparisons,
+    product photos, screenshot sets. The gallery is kept on one page (non-breaking).
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -404,10 +488,14 @@ def add_table(
     rows: list,
     caption: str = "",
 ) -> dict:
-    """Add a table to a section.
+    """Add a formatted table to a section.
 
-    headers: list of column names
-    rows: list of rows, each row is a list of cell values
+    headers: list of column header strings, e.g. ["Region", "Revenue", "Growth"]
+    rows: list of rows; each row is a list matching the number of headers,
+          e.g. [["EMEA", "$4.2M", "+18%"], ["APAC", "$3.1M", "+31%"]]
+    caption: optional table caption shown below
+
+    Renders with alternating row shading and a bold header row.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -433,7 +521,13 @@ def add_code_block(
     language: str = "",
     caption: str = "",
 ) -> dict:
-    """Add a code block to a section."""
+    """Add a syntax-highlighted code block to a section.
+
+    code: the code as a plain string (preserve indentation)
+    language: syntax language for highlighting, e.g. "python", "typescript",
+              "bash", "json", "sql", "rust", "go" — leave empty for plain text
+    caption: optional label shown above the code (e.g. "main.py" or "API request")
+    """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
@@ -452,9 +546,18 @@ def add_callout(
     text: str,
     kind: str = "info",
 ) -> dict:
-    """Add a callout box to a section.
+    """Add a highlighted callout box to a section.
 
-    kind: info | warning | tip | danger | quote
+    text: the callout text (Markdown supported)
+    kind:
+      info    — blue, ℹ  — for notes and supplementary information
+      warning — orange, ⚠ — for cautions and important caveats
+      tip     — green, ✓  — for best practices and recommendations
+      danger  — red, ✗   — for critical warnings and breaking changes
+      quote   — warm beige, ❝ — for pull quotes and highlighted statements
+
+    In academic_ru all callouts render as plain grey-bordered blocks
+    (no color — GOST 7.32 compliance).
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -469,7 +572,13 @@ def add_callout(
 
 @mcp.tool()
 def compile_preview(doc_id: str) -> dict:
-    """Compile a PNG preview of the first page. Use to check layout before final PDF."""
+    """Render the first page as a PNG and return its path. ALWAYS call before compile_pdf.
+
+    Open the returned path to visually inspect the layout: check heading hierarchy,
+    image placement, table widths, and overall spacing. Fix any issues with
+    update_section or by adjusting image widths, then preview again before
+    committing to the final PDF.
+    """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
@@ -482,7 +591,15 @@ def compile_preview(doc_id: str) -> dict:
 
 @mcp.tool()
 def compile_pdf(doc_id: str, output_path: str = "") -> dict:
-    """Compile the final PDF. Optionally specify output_path."""
+    """Compile the final PDF and return its path.
+
+    output_path: where to save the PDF, e.g. "~/Desktop/report.pdf"
+                 If omitted, saved to a temp directory (path is returned).
+                 Always specify output_path so the user can easily find the file.
+
+    After compiling, call save_document to persist the document state —
+    without it the document is lost if Claude Desktop restarts.
+    """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
@@ -502,9 +619,12 @@ def compile_pdf(doc_id: str, output_path: str = "") -> dict:
 
 @mcp.tool()
 def save_document(doc_id: str, path: str) -> dict:
-    """Save the document state to a JSON file so it can be restored after a restart.
+    """Save the document state to a JSON file for persistence across restarts.
 
-    path: absolute path where the JSON should be saved (e.g. ~/Desktop/report.json)
+    path: where to save, e.g. "~/Desktop/my_report.json"
+
+    Call this after every compile_pdf. If Claude Desktop restarts, the in-memory
+    document is lost — use load_document(path) to restore it and continue editing.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
@@ -519,9 +639,11 @@ def save_document(doc_id: str, path: str) -> dict:
 
 @mcp.tool()
 def load_document(path: str) -> dict:
-    """Load a previously saved document from a JSON file.
+    """Restore a document saved with save_document. Use after a Claude Desktop restart.
 
-    Returns doc_id that can be used immediately for compile_preview / compile_pdf.
+    path: path to the JSON file created by save_document
+    Returns doc_id — use it with add_section, compile_pdf etc. to continue editing.
+    Original image files must still exist at their original paths for compilation to work.
     """
     src = Path(path).expanduser()
     if not src.exists():
