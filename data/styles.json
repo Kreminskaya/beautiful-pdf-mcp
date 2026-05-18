@@ -175,12 +175,12 @@
       },
       "text": { "size": "11pt", "justify": true, "hyphenate": true, "leading": "0.68em" },
       "fonts": {
-        "family": "source",
-        "body": "Source Serif 4",
-        "heading": "Source Sans 3",
+        "family": "lora-cormorant",
+        "body": "Lora",
+        "heading": "Cormorant",
         "mono": "Source Code Pro",
         "fallback_body": "PT Serif",
-        "fallback_heading": "PT Sans"
+        "fallback_heading": "PT Serif"
       },
       "colors": {
         "accent": "#c4a35a",

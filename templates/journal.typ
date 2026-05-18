@@ -8,8 +8,8 @@
 #let p = doc.at("preset", default: (:))
 
 // ── Preset helpers ─────────────────────────────────────────────────────────────
-#let body-font    = p.at("body_font",    default: "Source Serif 4")
-#let heading-font = p.at("heading_font", default: "Source Sans 3")
+#let body-font    = p.at("body_font",    default: "Lora")
+#let heading-font = p.at("heading_font", default: "Cormorant")
 #let mono-font    = p.at("mono_font",    default: "Source Code Pro")
 #let accent-color = rgb(p.at("accent_color",  default: "#c4a35a"))
 #let head-color   = rgb(p.at("heading_color", default: "#1e1a14"))
@@ -71,9 +71,9 @@
 ]
 #show heading.where(level: 2): it => [
   #v(1.3em)
-  // Grey filled section-header bar
+  // Warm beige filled section-header bar — stays in the sand/beige palette
   #block(
-    fill: luma(235),
+    fill: rgb("#faf6ef"),
     width: 100%,
     inset: (left: 10pt, right: 8pt, top: 6pt, bottom: 6pt),
     radius: 2pt,
