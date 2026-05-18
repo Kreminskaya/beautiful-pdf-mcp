@@ -1,5 +1,5 @@
 // Business letter template — DIN 5008 / GOST style, clean, no TOC
-#import "helpers.typ": callout-box, render-table, render-code
+#import "helpers.typ": callout-box, render-table, render-code, render-gallery
 
 #let doc = json("assets/content.json")
 #let p = doc.at("preset", default: (:))
@@ -99,6 +99,7 @@
     v(0.5em)
   }
 
+  for gal in section.at("galleries", default: ()) { render-gallery(gal) }
   for tbl in section.tables { render-table(tbl) }
   for cb in section.code_blocks { render-code(cb, mono-font) }
   for co in section.callouts { callout-box(co.at("text"), co.kind) }

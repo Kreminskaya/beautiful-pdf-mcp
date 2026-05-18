@@ -1,5 +1,7 @@
 # beautiful-pdf-mcp
 
+![banner](assets/banner.png)
+
 MCP server for generating typographically clean PDFs via [Typst](https://typst.app). Gives any MCP-compatible AI agent the ability to produce print-ready documents — with correct fonts, margins, and spacing — not just styled HTML exports.
 
 ## Why
@@ -76,12 +78,17 @@ Restart Claude Desktop. You should see 10 new tools starting with `beautiful-pdf
 |---|---|
 | `create_document` | Create a new document, returns `doc_id` |
 | `add_section` | Add a section with Markdown content |
+| `update_section` | Update title or content of an existing section |
+| `remove_section` | Remove a section from the document |
 | `add_image` | Add an image (PNG, JPG, SVG) with caption |
+| `add_gallery` | Add a grid of images — auto-distributes across columns |
 | `add_table` | Add a table with headers and rows |
 | `add_code_block` | Add a syntax-highlighted code block |
 | `add_callout` | Add a callout box (info / warning / tip / danger / quote) |
 | `compile_preview` | Compile first page as PNG — check layout before final |
 | `compile_pdf` | Compile the final PDF |
+| `save_document` | Export document state to JSON for persistence |
+| `load_document` | Restore a previously saved document |
 | `get_document_state` | Inspect current document state |
 | `list_documents` | List all active documents in session |
 
@@ -113,9 +120,19 @@ add_image(doc_id, s2["section_id"],
     width="large"
 )
 
-# Check layout first
+# Gallery: distribute multiple images in a grid
+s3 = add_section(doc_id, "Portfolio", "Selected work.", level=1)
+add_gallery(doc_id, s3["section_id"],
+    paths=["/path/to/img1.png", "/path/to/img2.png", "/path/to/img3.png", "/path/to/img4.png"],
+    columns=2,
+    caption="Figure 2. Project screenshots"
+)
+
+# Check layout first — open the PNG and verify before committing to PDF
 preview = compile_preview(doc_id)
-# → open preview["preview_path"], verify typography
+
+# Save state so you can restore it after a Claude Desktop restart
+save_document(doc_id, "~/Desktop/report.json")
 
 # Compile final PDF
 pdf = compile_pdf(doc_id, output_path="~/Desktop/report.pdf")
