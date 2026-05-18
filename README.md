@@ -20,6 +20,13 @@ This server encodes those rules (Butterick, Bringhurst, GOST 7.32, Van de Graaf 
 | `technical` | API docs, developer guides | A4 | IBM Plex Sans |
 | `portfolio` | Portfolio, showcase | A4 | Noto Sans |
 | `letter` | Official correspondence | A4 | Source Sans 3 |
+| `journal` | Magazine / editorial layout | A4 | Source Serif 4 |
+
+### journal vs report
+
+`journal` is built for editorial content where images are part of the narrative flow. Every image wraps by default — even sections wrap right, odd sections wrap left — without you having to specify `position` per image. Use `position: "center"` to force a standalone figure when needed.
+
+`report` keeps images centered by default; wrap is opt-in per image via `position: "left-wrap"` / `"right-wrap"`.
 
 ## Previews
 
@@ -173,6 +180,28 @@ All fonts are open source (SIL OFL / Apache 2.0).
 ## Style system
 
 Typographic parameters are defined in `data/styles.json` — body size, leading, margins, heading sizes, accent colors. Each template maps to a preset. You can edit the JSON to customize any preset without touching the templates.
+
+### Per-document customisation with `preset_overrides`
+
+Pass any typographic parameter directly when creating a document — no need to edit JSON:
+
+```python
+doc = create_document(
+    title="Annual Review",
+    template="report",
+    preset_overrides={
+        "accent_color":  "#2a9d8f",   # teal brand colour
+        "heading_color": "#264653",
+        "body_font":     "PT Serif",
+        "show_toc":      False,
+        "margin_left":   "3.0cm",
+    }
+)
+```
+
+Overridable keys: `accent_color`, `heading_color`, `muted_color`, `body_color`, `body_font`, `heading_font`, `mono_font`, `text_size`, `h1_size`, `h2_size`, `h3_size`, `margin_left`, `margin_right`, `margin_top`, `margin_bottom`, `leading`, `show_toc`, `show_header_footer`, `numbered_headings`.
+
+Built-in colour themes in `data/styles.json` → `color_themes`: `navy`, `ibm-blue`, `teal`, `emerald`, `amber`, `violet`, `crimson`, `slate`, `classic`, `monochrome`.
 
 ## Agent workflow
 

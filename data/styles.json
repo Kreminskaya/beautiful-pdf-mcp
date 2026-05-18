@@ -166,6 +166,39 @@
       "dark_cover": true
     },
 
+    "journal": {
+      "name": "Журнал / Редакционный",
+      "description": "Журнальный макет. Текст обтекает изображения автоматически, стороны чередуются.",
+      "page": {
+        "paper": "a4",
+        "margin": { "left": "2.8cm", "right": "2.8cm", "top": "2.5cm", "bottom": "2.5cm" }
+      },
+      "text": { "size": "11pt", "justify": true, "hyphenate": true, "leading": "0.68em" },
+      "fonts": {
+        "family": "source",
+        "body": "Source Serif 4",
+        "heading": "Source Sans 3",
+        "mono": "Source Code Pro",
+        "fallback_body": "PT Serif",
+        "fallback_heading": "PT Sans"
+      },
+      "colors": {
+        "accent": "#8b7355",
+        "heading": "#2c2416",
+        "body": "#2c2416",
+        "muted": "#9a8870",
+        "theme": "sand"
+      },
+      "headings": {
+        "h1_size": "20pt", "h2_size": "14pt", "h3_size": "11.5pt",
+        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "semibold",
+        "numbered": false
+      },
+      "toc": false,
+      "header_footer": true,
+      "wrap_images": true
+    },
+
     "letter": {
       "name": "Деловое письмо",
       "description": "Официальное письмо, DIN 5008 / ГОСТ стиль.",

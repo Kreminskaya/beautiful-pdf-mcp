@@ -201,7 +201,7 @@ def create_document(
 ) -> dict:
     """Create a new document. Returns doc_id.
 
-    template: report | academic_ru | book | technical | portfolio | letter
+    template: report | academic_ru | book | technical | portfolio | letter | journal
     language: ru | en
     preset_overrides: optional dict to customise any typographic parameter, e.g.:
       {"accent_color": "#e63946", "body_font": "PT Serif", "show_toc": false}
