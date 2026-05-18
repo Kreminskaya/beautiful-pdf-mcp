@@ -265,6 +265,11 @@
       "body": "Noto Serif", "heading": "Noto Sans", "mono": "Noto Sans Mono",
       "cyrillic": 5, "character": "Универсальный, мультиязычный (Google)",
       "best_for": ["portfolio", "multilingual"]
+    },
+    "lora-cormorant": {
+      "body": "Lora", "heading": "Cormorant", "mono": "Source Code Pro",
+      "cyrillic": 5, "character": "Редакционный, журнальный, элегантный (Lora + Cormorant Garamond)",
+      "best_for": ["journal"]
     }
   },
 

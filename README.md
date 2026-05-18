@@ -20,11 +20,13 @@ This server encodes those rules (Butterick, Bringhurst, GOST 7.32, Van de Graaf 
 | `technical` | API docs, developer guides | A4 | IBM Plex Sans |
 | `portfolio` | Portfolio, showcase | A4 | Noto Sans |
 | `letter` | Official correspondence | A4 | Source Sans 3 |
-| `journal` | Magazine / editorial layout | A4 | Source Serif 4 |
+| `journal` | Magazine / editorial layout | A4 | Lora + Cormorant |
 
 ### journal vs report
 
 `journal` is built for editorial content where images are part of the narrative flow. Every image wraps by default — even sections wrap right, odd sections wrap left — without you having to specify `position` per image. Use `position: "center"` to force a standalone figure when needed.
+
+The template ships with a dedicated editorial font pair: **Lora** (warm calligraphic body serif) for running text and **Cormorant** (high-contrast display serif) for headings — both with full Cyrillic support.
 
 `report` keeps images centered by default; wrap is opt-in per image via `position: "left-wrap"` / `"right-wrap"`.
 
