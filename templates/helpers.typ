@@ -5,7 +5,7 @@
   warning: (bg: rgb("#fef9e7"), border: rgb("#e67e22"), icon: "⚠"),
   tip:     (bg: rgb("#eafaf1"), border: rgb("#27ae60"), icon: "✓"),
   danger:  (bg: rgb("#fdf2f2"), border: rgb("#c0392b"), icon: "✗"),
-  quote:   (bg: rgb("#f5f0ff"), border: rgb("#8e44ad"), icon: "❝"),
+  quote:   (bg: rgb("#faf6ef"), border: rgb("#c8b48a"), icon: "❝"),
 )
 
 #let callout-box(body, kind) = {
