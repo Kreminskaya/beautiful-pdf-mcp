@@ -11,10 +11,10 @@
 #let body-font    = p.at("body_font",    default: "Source Serif 4")
 #let heading-font = p.at("heading_font", default: "Source Sans 3")
 #let mono-font    = p.at("mono_font",    default: "Source Code Pro")
-#let accent-color = rgb(p.at("accent_color",  default: "#8b7355"))
-#let head-color   = rgb(p.at("heading_color", default: "#2c2416"))
-#let muted-color  = rgb(p.at("muted_color",   default: "#9a8870"))
-#let body-color   = rgb(p.at("body_color",    default: "#2c2416"))
+#let accent-color = rgb(p.at("accent_color",  default: "#c4a35a"))
+#let head-color   = rgb(p.at("heading_color", default: "#1e1a14"))
+#let muted-color  = rgb(p.at("muted_color",   default: "#a89878"))
+#let body-color   = rgb(p.at("body_color",    default: "#1e1a14"))
 #let text-size    = eval(p.at("text_size", default: "11pt"),  mode: "code")
 #let h1-size      = eval(p.at("h1_size",   default: "20pt"),  mode: "code")
 #let h2-size      = eval(p.at("h2_size",   default: "14pt"),  mode: "code")
@@ -61,13 +61,8 @@
 // ── Heading styles — editorial bars ──────────────────────────────────────────
 #show heading.where(level: 1): it => [
   #v(2em)
-  // Bold accent stripe + thin grey stripe
-  #stack(
-    dir: ttb,
-    rect(fill: accent-color, width: 100%, height: 5pt, radius: 0pt),
-    rect(fill: luma(210),     width: 100%, height: 2pt, radius: 0pt),
-  )
-  #v(0.55em)
+  #line(length: 100%, stroke: 2pt + accent-color)
+  #v(0.5em)
   #block[
     #set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color)
     #it.body

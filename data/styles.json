@@ -183,10 +183,10 @@
         "fallback_heading": "PT Sans"
       },
       "colors": {
-        "accent": "#8b7355",
-        "heading": "#2c2416",
-        "body": "#2c2416",
-        "muted": "#9a8870",
+        "accent": "#c4a35a",
+        "heading": "#1e1a14",
+        "body": "#1e1a14",
+        "muted": "#a89878",
         "theme": "sand"
       },
       "headings": {
