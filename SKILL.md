@@ -16,7 +16,7 @@
 - `add_callout(doc_id, section_id, text, kind)` — врезка (info/warning/tip/danger/quote)
 
 **Компиляция**
-- `compile_preview(doc_id)` — PNG первой страницы для проверки (вызывай всегда перед compile_pdf)
+- `compile_preview(doc_id, pages="1-3")` — PNG превью страниц (по умолчанию первые 3), всегда вызывай перед compile_pdf
 - `compile_pdf(doc_id, output_path)` — финальный PDF
 
 **Управление документами**

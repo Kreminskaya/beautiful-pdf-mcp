@@ -172,8 +172,9 @@ def _copy_image_to_assets(img_path: Path, assets_dir: Path) -> str:
     return f"assets/{img_path.name}"
 
 
-def _compile_typst(doc_id: str, output_format: str = "pdf") -> Path:
-    """Compile the document to PDF or PNG preview. Returns output path."""
+def _compile_typst(doc_id: str, output_format: str = "pdf",
+                   pages: str = "1") -> Path:
+    """Compile the document to PDF or PNG preview. Returns output path (or dir for multi-page PNG)."""
     doc = _docs[doc_id]
     work_dir = Path(doc["work_dir"])
     assets_dir = work_dir / "assets"
@@ -214,10 +215,16 @@ def _compile_typst(doc_id: str, output_format: str = "pdf") -> Path:
                "--font-path", str(FONTS_DIR),
                str(main_typ), str(out_path)]
     else:
-        out_path = work_dir / "preview.png"
+        # Multi-page PNG: use {0p} template so typst names files preview_01.png etc.
+        # Single page "1": use plain preview.png (no suffix) for backward compat.
+        is_single = pages.strip() == "1"
+        if is_single:
+            out_path = work_dir / "preview.png"
+        else:
+            out_path = work_dir / "preview_{0p}.png"
         cmd = ["typst", "compile",
                "--font-path", str(FONTS_DIR),
-               "--format", "png", "--pages", "1",
+               "--format", "png", "--pages", pages,
                str(main_typ), str(out_path)]
 
     result = subprocess.run(
@@ -571,21 +578,51 @@ def add_callout(
 
 
 @mcp.tool()
-def compile_preview(doc_id: str) -> dict:
-    """Render the first page as a PNG and return its path. ALWAYS call before compile_pdf.
+def compile_preview(doc_id: str, pages: str = "1-3") -> dict:
+    """Render pages as PNG previews and return their paths. ALWAYS call before compile_pdf.
 
-    Open the returned path to visually inspect the layout: check heading hierarchy,
-    image placement, table widths, and overall spacing. Fix any issues with
-    update_section or by adjusting image widths, then preview again before
-    committing to the final PDF.
+    pages: which pages to render, e.g. "1" (cover only), "1-3" (first three),
+           "2" (just page 2), "1,3,5" (specific pages), "1-" (all pages).
+           Default is "1-3" — enough to see the cover, TOC, and first content page.
+
+    Returns preview_paths (list of PNG paths) and preview_path (first page, for quick access).
+    Open each PNG to inspect layout: heading hierarchy, image placement, table widths,
+    spacing. Fix issues with update_section or image width/position, then preview again
+    before calling compile_pdf.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
-    out_path = _compile_typst(doc_id, output_format="png")
+    out_path = _compile_typst(doc_id, output_format="png", pages=pages)
+
+    # Collect all generated PNG files
+    work_dir = out_path.parent
+    is_single = pages.strip() == "1"
+    if is_single:
+        png_paths = [str(out_path)]
+    else:
+        # typst names them preview_01.png, preview_02.png, etc.
+        import re as _re
+        def _page_num(p: Path) -> int:
+            m = _re.search(r"preview_(\d+)\.png$", p.name)
+            return int(m.group(1)) if m else 0
+        png_paths = [
+            str(p) for p in sorted(work_dir.glob("preview_*.png"), key=_page_num)
+        ]
+        if not png_paths:
+            # Fallback: single page document compiled as plain preview.png
+            plain = work_dir / "preview.png"
+            if plain.exists():
+                png_paths = [str(plain)]
+
     return {
-        "preview_path": str(out_path),
-        "message": f"Preview saved to {out_path}. Open it to check layout.",
+        "preview_path": png_paths[0] if png_paths else str(out_path),
+        "preview_paths": png_paths,
+        "page_count": len(png_paths),
+        "message": (
+            f"Preview ready: {len(png_paths)} page(s). "
+            f"Open each path to check layout before compile_pdf."
+        ),
     }
 
 
