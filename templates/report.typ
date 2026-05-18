@@ -124,7 +124,7 @@
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
-  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(")
+  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
   let body = eval(safe-content, mode: "markup")
 
   // Separate wrap-images from standard ones

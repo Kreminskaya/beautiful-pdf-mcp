@@ -1,6 +1,21 @@
 // Academic RU template — ГОСТ 7.32, 14pt, 1.5x leading, 30/15/20/20 margins
 // ГОСТ 7.32: все иллюстрации — по центру, подпись под рисунком. Обтекание текстом не применяется.
-#import "helpers.typ": callout-box, render-table, render-code, render-gallery
+#import "helpers.typ": render-table, render-code, render-gallery
+
+// ГОСТ: callout-боксы без цвета — серая левая черта, обычный текст
+#let callout-box(body, kind) = {
+  let safe-body = body.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
+  v(0.5em)
+  block(
+    width: 100%,
+    stroke: (left: 2pt + luma(160)),
+    inset: (left: 12pt, right: 8pt, top: 6pt, bottom: 6pt),
+  )[
+    #set text(size: 0.9em, fill: luma(30))
+    #eval(safe-body, mode: "markup")
+  ]
+  v(0.5em)
+}
 
 #let doc = json("assets/content.json")
 #let p = doc.at("preset", default: (:))
@@ -118,7 +133,7 @@
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
-  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(")
+  let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
   eval(safe-content, mode: "markup")
 
   // ГОСТ 7.32: все изображения по центру, подпись под рисунком. Обтекание не применяется.

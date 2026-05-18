@@ -94,8 +94,8 @@ def _md_to_typst(text: str) -> str:
     text = re.sub(r"(?<!_)_(?!_)(.+?)(?<!_)_(?!_)", r"_\1_", text)
     # Links [text](url) → Typst #link — BEFORE escaping # so we can protect them
     text = re.sub(r"\[(.+?)\]\((.+?)\)", r'#link("\2")[\1]', text)
-    # Escape all # that are not part of #link() we just inserted
-    text = re.sub(r"(?<!\\)#(?!link\()", r"\\#", text)
+    # Escape all # that are not part of #link() or #footnote[] we inserted
+    text = re.sub(r"(?<!\\)#(?!link\(|footnote\[)", r"\\#", text)
 
     # Restore inline code
     for key, val in code_spans.items():
