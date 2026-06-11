@@ -1,29 +1,55 @@
 // Academic RU template — ГОСТ 7.32, 14pt, 1.5x leading, 30/15/20/20 margins
 // ГОСТ 7.32: все иллюстрации — по центру, подпись под рисунком. Обтекание текстом не применяется.
-#import "helpers.typ": render-table, render-code, render-gallery
+#import "helpers.typ": render-code, render-gallery
 
 // ГОСТ: callout-боксы без цвета — серая левая черта, обычный текст
 #let callout-box(body, kind) = {
   let safe-body = body.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
-  v(0.5em)
+  v(1.2em)
   block(
     width: 100%,
     stroke: (left: 2pt + luma(160)),
-    inset: (left: 12pt, right: 8pt, top: 6pt, bottom: 6pt),
+    inset: (left: 12pt, right: 8pt, top: 8pt, bottom: 8pt),
+    above: 0pt,
+    below: 0pt,
   )[
     #set text(size: 0.9em, fill: luma(30))
+    #set par(first-line-indent: 0pt, spacing: 0.5em)
     #eval(safe-body, mode: "markup")
   ]
-  v(0.5em)
+  v(1.2em)
+}
+
+// ГОСТ 7.32: table — simple borders, no fill. Caption above via figure rule.
+// The table spans the full text measure (1fr columns) so it reads as a solid
+// block of the page, with generous air before and after — not a cramped strip
+// glued to the paragraph above it.
+#let render-table-gost(tbl) = {
+  v(1.4em, weak: true)
+  let col-count = tbl.headers.len()
+  figure(
+    table(
+      columns: (1fr,) * col-count,
+      stroke: 0.5pt + luma(80),
+      inset: (x: 8pt, y: 7pt),
+      align: center + horizon,
+      ..tbl.headers.map(h => text(weight: "semibold")[#h]),
+      ..tbl.rows.flatten().map(cell => [#cell]),
+    ),
+    caption: if tbl.caption != "" { [ — #tbl.caption] } else { [] },
+    supplement: [Таблица],
+    gap: 0.65em,
+  )
+  v(1.4em, weak: true)
 }
 
 #let doc = json("assets/content.json")
 #let p = doc.at("preset", default: (:))
 
 // ── Preset helpers ─────────────────────────────────────────────────────────────
-#let body-font    = p.at("body_font",    default: "PT Serif")
-#let heading-font = p.at("heading_font", default: "PT Sans")
-#let mono-font    = p.at("mono_font",    default: "PT Mono")
+#let body-font    = p.at("body_font",    default: "Times New Roman")
+#let heading-font = p.at("heading_font", default: "Times New Roman")
+#let mono-font    = p.at("mono_font",    default: "Courier New")
 #let head-color   = rgb(p.at("heading_color", default: "#1a1a1a"))
 #let body-color   = rgb(p.at("body_color",    default: "#000000"))
 #let muted-color  = rgb(p.at("muted_color",   default: "#555555"))
@@ -69,32 +95,48 @@
 #set par(
   justify: true,
   leading: eval(p.at("leading", default: "0.75em"), mode: "code"),
-  spacing: 0em,
+  spacing: 0.4em,
   first-line-indent: eval(indent-str, mode: "code"),
 )
 #show raw: set text(font: mono-font, size: 0.82em)
+// ГОСТ: table captions go ABOVE the table
+#show figure.where(kind: table): set figure.caption(position: top)
+// ГОСТ: captions — regular, near-black. Images: centered; tables: left-aligned.
+// position==top means it's a table caption (set above); bottom means image.
+#show figure.caption: it => [
+  #set text(font: body-font, size: 12pt, fill: body-color)
+  #set par(first-line-indent: 0pt, justify: false)
+  #let label = [#it.supplement~#context it.counter.display(it.numbering)#it.body]
+  #if it.position == top [#label] else [#align(center)[#label]]
+]
 
 // ── Heading styles (GOST: bold, centered for H1, left for H2/H3) ─────────────
+// block(sticky: true) keeps every heading glued to the text that follows it, so
+// a heading can never be stranded alone at the bottom of a page.
+// ГОСТ 7.32 п. 6.2.2: каждый раздел основной части начинается с нового листа.
 #show heading.where(level: 1): it => {
-  v(1.8em)
-  align(center)[
-    #set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color)
-    #upper(it.body)
+  pagebreak(weak: true)
+  block(sticky: true)[
+    #v(1.8em)
+    #align(center)[
+      #set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color)
+      #upper(it.body)
+    ]
+    #v(0.8em)
   ]
-  v(0.8em)
 }
-#show heading.where(level: 2): it => {
-  v(1.4em)
-  set text(font: heading-font, size: h2-size, weight: "bold", fill: head-color)
-  it
-  v(0.5em)
-}
-#show heading.where(level: 3): it => {
-  v(1.0em)
-  set text(font: heading-font, size: h3-size, weight: "bold", fill: head-color)
-  it
-  v(0.4em)
-}
+#show heading.where(level: 2): it => block(sticky: true)[
+  #v(1.4em)
+  #set text(font: heading-font, size: h2-size, weight: "bold", fill: head-color)
+  #it
+  #v(0.5em)
+]
+#show heading.where(level: 3): it => block(sticky: true)[
+  #v(1.0em)
+  #set text(font: heading-font, size: h3-size, weight: "bold", fill: head-color)
+  #it
+  #v(0.4em)
+]
 
 // ── Title page ────────────────────────────────────────────────────────────────
 #set page(numbering: none)
@@ -134,22 +176,48 @@
   else { heading(level: 3)[#section.title] }
 
   let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
-  eval(safe-content, mode: "markup")
 
-  // ГОСТ 7.32: все изображения по центру, подпись под рисунком. Обтекание не применяется.
-  for img in section.images {
-    v(1.0em)
+  // ГОСТ 7.32: все изображения по центру, подпись под рисунком. Обтекание не
+  // применяется. Рисунок вставляется ВНУТРЬ раздела — после абзаца с первым
+  // упоминанием (а не после всего текста), и текст продолжается под ним; иначе
+  // рисунок, не влезший на полосу, уезжает на отдельный полупустой лист.
+  // caption: [] means "Рисунок N" only; [ — text] means "Рисунок N — text"
+  let gost-fig(img) = {
+    v(1.0em, weak: true)
     let w = img.at("width", default: "80%")
+    let cap = img.at("caption", default: "")
     figure(
       image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
-      caption: if img.at("caption", default: "") != "" { [#img.caption] } else { none },
+      caption: if cap != "" { [ — #cap] } else { [] },
       supplement: [Рисунок],
     )
-    v(0.8em)
+    v(1.0em, weak: true)
+  }
+
+  if section.images.len() == 0 {
+    eval(safe-content, mode: "markup")
+  } else {
+    let paras = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
+    let imgs  = section.images
+    let n     = imgs.len()
+    let total = paras.len()
+    let cursor = 0
+    for (k, im) in imgs.enumerate() {
+      // Вставка после ~(k+1)/(n+1) долей текста, но не раньше первого абзаца.
+      let cut = calc.max(1, calc.min(total, calc.ceil(total * (k + 1) / (n + 1))))
+      if cut > cursor {
+        eval(paras.slice(cursor, cut).join("\n\n"), mode: "markup")
+        cursor = cut
+      }
+      gost-fig(im)
+    }
+    if cursor < total {
+      eval(paras.slice(cursor).join("\n\n"), mode: "markup")
+    }
   }
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }
-  for tbl in section.tables { render-table(tbl) }
+  for tbl in section.tables { render-table-gost(tbl) }
   for cb in section.code_blocks { render-code(cb, mono-font) }
   for co in section.callouts { callout-box(co.at("text"), co.kind) }
 }

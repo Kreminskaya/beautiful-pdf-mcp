@@ -45,22 +45,31 @@
 }
 
 #let render-gallery(gallery) = {
-  let cols = gallery.at("columns", default: 2)
+  let cols = int(gallery.at("columns", default: 2))
   let imgs = gallery.images
+  let gap = 6pt
+  // Row height in pt — all images in a row share this height.
+  // Width of each image is proportional to its aspect ratio (w/h = 1/aspect).
+  // This produces a justified gallery where every row fills the full text width.
+  let row-h = gallery.at("row_height_pt", default: 140)
+
   v(0.8em)
   block(breakable: false)[
-    #grid(
-      columns: cols,
-      gutter: 6pt,
-      ..imgs.map(img => {
-        let local = img.at("_local", default: img.path)
-        image(local, width: 100%)
-      })
-    )
+    #for row in imgs.chunks(cols) {
+      grid(
+        columns: row.map(im => (1.0 / im.at("aspect", default: 0.75)) * 1fr),
+        gutter: gap,
+        ..row.map(im => {
+          let local = im.at("_local", default: im.path)
+          image(local, height: (row-h * 1pt), fit: "cover")
+        })
+      )
+      v(gap)
+    }
     #if gallery.caption != "" {
-      v(0.3em)
+      v(0.1em)
       align(center)[
-        #set text(size: 0.85em, fill: luma(100))
+        #set text(size: 0.8em, fill: luma(110), style: "italic")
         #gallery.caption
       ]
     }

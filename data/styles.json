@@ -6,9 +6,19 @@
       "description": "Деловой или академический отчёт. A4, сдержанный стиль.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "2.8cm", "right": "2.2cm", "top": "2.5cm", "bottom": "2.5cm" }
+        "margin": {
+          "left": "2.8cm",
+          "right": "2.2cm",
+          "top": "2.5cm",
+          "bottom": "2.5cm"
+        }
       },
-      "text": { "size": "10.5pt", "justify": true, "hyphenate": true, "leading": "0.6em" },
+      "text": {
+        "size": "10.5pt",
+        "justify": true,
+        "hyphenate": true,
+        "leading": "0.6em"
+      },
       "fonts": {
         "family": "source",
         "body": "Source Serif 4",
@@ -25,22 +35,35 @@
         "theme": "navy"
       },
       "headings": {
-        "h1_size": "16pt", "h2_size": "13pt", "h3_size": "11pt",
-        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "semibold",
+        "h1_size": "16pt",
+        "h2_size": "13pt",
+        "h3_size": "11pt",
+        "h1_weight": "bold",
+        "h2_weight": "semibold",
+        "h3_weight": "semibold",
         "numbered": true
       },
       "toc": true,
       "header_footer": true
     },
-
     "academic_ru": {
       "name": "Академический (ГОСТ)",
       "description": "Научная работа по ГОСТ 7.32. Поля и отступы строго по стандарту.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "3.0cm", "right": "1.5cm", "top": "2.0cm", "bottom": "2.0cm" }
+        "margin": {
+          "left": "3.0cm",
+          "right": "1.5cm",
+          "top": "2.0cm",
+          "bottom": "2.0cm"
+        }
       },
-      "text": { "size": "14pt", "justify": true, "hyphenate": false, "leading": "0.75em" },
+      "text": {
+        "size": "14pt",
+        "justify": true,
+        "hyphenate": false,
+        "leading": "0.75em"
+      },
       "fonts": {
         "family": "pt",
         "body": "PT Serif",
@@ -57,23 +80,36 @@
         "theme": "monochrome"
       },
       "headings": {
-        "h1_size": "16pt", "h2_size": "14pt", "h3_size": "14pt",
-        "h1_weight": "bold", "h2_weight": "bold", "h3_weight": "bold",
+        "h1_size": "16pt",
+        "h2_size": "14pt",
+        "h3_size": "14pt",
+        "h1_weight": "bold",
+        "h2_weight": "bold",
+        "h3_weight": "bold",
         "numbered": true
       },
       "toc": true,
       "header_footer": true,
       "indent": "1.25cm"
     },
-
     "book": {
       "name": "Книга / Non-fiction",
       "description": "Длинный текст для чтения. A5, книжные поля по Ван де Граафу.",
       "page": {
         "paper": "a5",
-        "margin": { "left": "2.0cm", "right": "3.5cm", "top": "2.5cm", "bottom": "4.0cm" }
+        "margin": {
+          "left": "2.0cm",
+          "right": "3.5cm",
+          "top": "2.5cm",
+          "bottom": "4.0cm"
+        }
       },
-      "text": { "size": "10pt", "justify": true, "hyphenate": true, "leading": "0.65em" },
+      "text": {
+        "size": "10pt",
+        "justify": true,
+        "hyphenate": true,
+        "leading": "0.65em"
+      },
       "fonts": {
         "family": "pt",
         "body": "PT Serif",
@@ -90,8 +126,12 @@
         "theme": "classic"
       },
       "headings": {
-        "h1_size": "18pt", "h2_size": "13pt", "h3_size": "11pt",
-        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "semibold",
+        "h1_size": "18pt",
+        "h2_size": "13pt",
+        "h3_size": "11pt",
+        "h1_weight": "bold",
+        "h2_weight": "semibold",
+        "h3_weight": "semibold",
         "numbered": false
       },
       "toc": true,
@@ -99,15 +139,24 @@
       "chapter_break": true,
       "indent": "1.5em"
     },
-
     "technical": {
       "name": "Техническая документация",
       "description": "Документация, API-гайды, руководства. Выравнивание влево, акцент на коде.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "2.5cm", "right": "2.5cm", "top": "2.5cm", "bottom": "2.5cm" }
+        "margin": {
+          "left": "2.5cm",
+          "right": "2.5cm",
+          "top": "2.5cm",
+          "bottom": "2.5cm"
+        }
       },
-      "text": { "size": "10pt", "justify": false, "hyphenate": true, "leading": "0.65em" },
+      "text": {
+        "size": "10pt",
+        "justify": false,
+        "hyphenate": true,
+        "leading": "0.65em"
+      },
       "fonts": {
         "family": "ibm",
         "body": "IBM Plex Serif",
@@ -124,23 +173,36 @@
         "theme": "ibm-blue"
       },
       "headings": {
-        "h1_size": "20pt", "h2_size": "14pt", "h3_size": "11pt",
-        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "semibold",
+        "h1_size": "20pt",
+        "h2_size": "14pt",
+        "h3_size": "11pt",
+        "h1_weight": "bold",
+        "h2_weight": "semibold",
+        "h3_weight": "semibold",
         "numbered": true
       },
       "toc": true,
       "header_footer": true,
       "code_line_numbers": true
     },
-
     "portfolio": {
       "name": "Портфолио / Презентационный",
       "description": "Визуальный документ. Акцент на изображениях, тёмная обложка.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "2.5cm", "right": "2.5cm", "top": "2.5cm", "bottom": "2.5cm" }
+        "margin": {
+          "left": "2.5cm",
+          "right": "2.5cm",
+          "top": "2.5cm",
+          "bottom": "2.5cm"
+        }
       },
-      "text": { "size": "11pt", "justify": true, "hyphenate": true, "leading": "0.6em" },
+      "text": {
+        "size": "11pt",
+        "justify": true,
+        "hyphenate": true,
+        "leading": "0.6em"
+      },
       "fonts": {
         "family": "noto",
         "body": "Noto Sans",
@@ -157,23 +219,36 @@
         "theme": "violet"
       },
       "headings": {
-        "h1_size": "22pt", "h2_size": "15pt", "h3_size": "12pt",
-        "h1_weight": "bold", "h2_weight": "bold", "h3_weight": "semibold",
+        "h1_size": "22pt",
+        "h2_size": "15pt",
+        "h3_size": "12pt",
+        "h1_weight": "bold",
+        "h2_weight": "bold",
+        "h3_weight": "semibold",
         "numbered": false
       },
       "toc": false,
       "header_footer": true,
       "dark_cover": true
     },
-
     "journal": {
       "name": "Журнал / Редакционный",
       "description": "Журнальный макет. Текст обтекает изображения автоматически, стороны чередуются.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "2.8cm", "right": "2.8cm", "top": "2.5cm", "bottom": "2.5cm" }
+        "margin": {
+          "left": "2.8cm",
+          "right": "2.8cm",
+          "top": "2.5cm",
+          "bottom": "2.5cm"
+        }
       },
-      "text": { "size": "11pt", "justify": true, "hyphenate": true, "leading": "0.68em" },
+      "text": {
+        "size": "11pt",
+        "justify": true,
+        "hyphenate": true,
+        "leading": "0.68em"
+      },
       "fonts": {
         "family": "lora-cormorant",
         "body": "Lora",
@@ -190,23 +265,36 @@
         "theme": "sand"
       },
       "headings": {
-        "h1_size": "20pt", "h2_size": "14pt", "h3_size": "11.5pt",
-        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "semibold",
+        "h1_size": "20pt",
+        "h2_size": "14pt",
+        "h3_size": "11.5pt",
+        "h1_weight": "bold",
+        "h2_weight": "semibold",
+        "h3_weight": "semibold",
         "numbered": false
       },
       "toc": false,
       "header_footer": true,
       "wrap_images": true
     },
-
     "letter": {
       "name": "Деловое письмо",
       "description": "Официальное письмо, DIN 5008 / ГОСТ стиль.",
       "page": {
         "paper": "a4",
-        "margin": { "left": "2.5cm", "right": "2.0cm", "top": "2.0cm", "bottom": "2.0cm" }
+        "margin": {
+          "left": "2.5cm",
+          "right": "2.0cm",
+          "top": "2.0cm",
+          "bottom": "2.0cm"
+        }
       },
-      "text": { "size": "11pt", "justify": false, "hyphenate": false, "leading": "0.65em" },
+      "text": {
+        "size": "11pt",
+        "justify": false,
+        "hyphenate": false,
+        "leading": "0.65em"
+      },
       "fonts": {
         "family": "source",
         "body": "Source Sans 3",
@@ -223,56 +311,167 @@
         "theme": "navy"
       },
       "headings": {
-        "h1_size": "13pt", "h2_size": "12pt", "h3_size": "11pt",
-        "h1_weight": "bold", "h2_weight": "semibold", "h3_weight": "regular",
+        "h1_size": "13pt",
+        "h2_size": "12pt",
+        "h3_size": "11pt",
+        "h1_weight": "bold",
+        "h2_weight": "semibold",
+        "h3_weight": "regular",
         "numbered": false
+      },
+      "toc": false,
+      "header_footer": false
+    },
+    "resume": {
+      "name": "Резюме / CV",
+      "description": "Современное двухколоночное резюме: имя крупно, рубрики с акцентными линиями, сайдбар с навыками.",
+      "page": {
+        "paper": "a4",
+        "margin": {
+          "left": "1.9cm",
+          "right": "1.9cm",
+          "top": "1.8cm",
+          "bottom": "1.8cm"
+        }
+      },
+      "text": {
+        "size": "10pt",
+        "justify": false,
+        "hyphenate": false,
+        "leading": "0.6em"
+      },
+      "fonts": {
+        "family": "plex",
+        "body": "IBM Plex Sans",
+        "heading": "IBM Plex Sans",
+        "mono": "IBM Plex Mono"
+      },
+      "colors": {
+        "accent": "#0f766e",
+        "heading": "#111827",
+        "body": "#1f2937",
+        "muted": "#6b7280",
+        "theme": "teal"
+      },
+      "headings": {
+        "h1_size": "27pt",
+        "h2_size": "9.5pt",
+        "h3_size": "11pt"
       },
       "toc": false,
       "header_footer": false
     }
   },
-
   "color_themes": {
-    "navy":       { "accent": "#1d3557", "light": "#e8eef4", "description": "Корпоративный, академический, доверие" },
-    "ibm-blue":   { "accent": "#0f62fe", "light": "#edf5ff", "description": "Технологичный, IT, SaaS" },
-    "teal":       { "accent": "#0d9488", "light": "#f0fdfa", "description": "Современный, health-tech, стартап" },
-    "emerald":    { "accent": "#059669", "light": "#ecfdf5", "description": "ESG, экология, рост" },
-    "amber":      { "accent": "#d97706", "light": "#fffbeb", "description": "Премиум, тёплый, классический" },
-    "violet":     { "accent": "#7c3aed", "light": "#f5f3ff", "description": "Креативный, портфолио, дизайн" },
-    "crimson":    { "accent": "#dc2626", "light": "#fef2f2", "description": "Энергия, срочность, акции" },
-    "slate":      { "accent": "#475569", "light": "#f8fafc", "description": "Нейтральный, минималистичный" },
-    "classic":    { "accent": "#8b0000", "light": "#fdf8f8", "description": "Классическая книга, литература" },
-    "monochrome": { "accent": "#1a1a1a", "light": "#f5f5f5", "description": "Академический, ГОСТ, строгий" }
-  },
-
-  "font_families": {
-    "pt": {
-      "body": "PT Serif", "heading": "PT Sans", "mono": "PT Mono",
-      "cyrillic": 5, "character": "Классический, книжный, российский стандарт",
-      "best_for": ["academic_ru", "book", "letter"]
+    "navy": {
+      "accent": "#1d3557",
+      "light": "#e8eef4",
+      "description": "Корпоративный, академический, доверие"
     },
-    "source": {
-      "body": "Source Serif 4", "heading": "Source Sans 3", "mono": "Source Code Pro",
-      "cyrillic": 5, "character": "Элегантный, профессиональный (Adobe)",
-      "best_for": ["report", "letter", "technical"]
+    "ibm-blue": {
+      "accent": "#0f62fe",
+      "light": "#edf5ff",
+      "description": "Технологичный, IT, SaaS"
     },
-    "ibm": {
-      "body": "IBM Plex Serif", "heading": "IBM Plex Sans", "mono": "IBM Plex Mono",
-      "cyrillic": 5, "character": "Корпоративный, технологичный (IBM)",
-      "best_for": ["technical", "report"]
+    "teal": {
+      "accent": "#0d9488",
+      "light": "#f0fdfa",
+      "description": "Современный, health-tech, стартап"
     },
-    "noto": {
-      "body": "Noto Serif", "heading": "Noto Sans", "mono": "Noto Sans Mono",
-      "cyrillic": 5, "character": "Универсальный, мультиязычный (Google)",
-      "best_for": ["portfolio", "multilingual"]
+    "emerald": {
+      "accent": "#059669",
+      "light": "#ecfdf5",
+      "description": "ESG, экология, рост"
     },
-    "lora-cormorant": {
-      "body": "Lora", "heading": "Cormorant", "mono": "Source Code Pro",
-      "cyrillic": 5, "character": "Редакционный, журнальный, элегантный (Lora + Cormorant Garamond)",
-      "best_for": ["journal"]
+    "amber": {
+      "accent": "#d97706",
+      "light": "#fffbeb",
+      "description": "Премиум, тёплый, классический"
+    },
+    "violet": {
+      "accent": "#7c3aed",
+      "light": "#f5f3ff",
+      "description": "Креативный, портфолио, дизайн"
+    },
+    "crimson": {
+      "accent": "#dc2626",
+      "light": "#fef2f2",
+      "description": "Энергия, срочность, акции"
+    },
+    "slate": {
+      "accent": "#475569",
+      "light": "#f8fafc",
+      "description": "Нейтральный, минималистичный"
+    },
+    "classic": {
+      "accent": "#8b0000",
+      "light": "#fdf8f8",
+      "description": "Классическая книга, литература"
+    },
+    "monochrome": {
+      "accent": "#1a1a1a",
+      "light": "#f5f5f5",
+      "description": "Академический, ГОСТ, строгий"
     }
   },
-
+  "font_families": {
+    "pt": {
+      "body": "PT Serif",
+      "heading": "PT Sans",
+      "mono": "PT Mono",
+      "cyrillic": 5,
+      "character": "Классический, книжный, российский стандарт",
+      "best_for": [
+        "academic_ru",
+        "book",
+        "letter"
+      ]
+    },
+    "source": {
+      "body": "Source Serif 4",
+      "heading": "Source Sans 3",
+      "mono": "Source Code Pro",
+      "cyrillic": 5,
+      "character": "Элегантный, профессиональный (Adobe)",
+      "best_for": [
+        "report",
+        "letter",
+        "technical"
+      ]
+    },
+    "ibm": {
+      "body": "IBM Plex Serif",
+      "heading": "IBM Plex Sans",
+      "mono": "IBM Plex Mono",
+      "cyrillic": 5,
+      "character": "Корпоративный, технологичный (IBM)",
+      "best_for": [
+        "technical",
+        "report"
+      ]
+    },
+    "noto": {
+      "body": "Noto Serif",
+      "heading": "Noto Sans",
+      "mono": "Noto Sans Mono",
+      "cyrillic": 5,
+      "character": "Универсальный, мультиязычный (Google)",
+      "best_for": [
+        "portfolio",
+        "multilingual"
+      ]
+    },
+    "lora-cormorant": {
+      "body": "Lora",
+      "heading": "Cormorant",
+      "mono": "Source Code Pro",
+      "cyrillic": 5,
+      "character": "Редакционный, журнальный, элегантный (Lora + Cormorant Garamond)",
+      "best_for": [
+        "journal"
+      ]
+    }
+  },
   "antipatterns_checklist": [
     "Висячий заголовок — заголовок внизу страницы без текста под ним",
     "Widow — последняя строка абзаца одна вверху страницы",

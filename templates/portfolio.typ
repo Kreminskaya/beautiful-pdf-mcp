@@ -47,9 +47,17 @@
   fill: body-color,
   lang: doc.language,
   hyphenate: true,
+  // Cheap hyphenation cost → justified lines pack tight instead of opening into
+  // rivers (large gaps between words on sparse lines).
+  costs: (hyphenation: 5%, runt: 100%, widow: 100%, orphan: 100%),
 )
 #set par(justify: true, leading: 0.62em, spacing: 1.05em)
 #show raw: set text(font: mono-font, size: 0.88em)
+#show figure.caption: it => [
+  #set text(size: 0.78em, fill: muted-color, tracking: 0.04em)
+  #set par(justify: false)
+  #align(center)[#upper(it.body)]
+]
 
 // ── Heading styles ────────────────────────────────────────────────────────────
 #show heading.where(level: 1): it => [
@@ -145,7 +153,7 @@
     let w  = wi.at("width", default: "40%")
     let side = if wi.at("position", default: "center") == "left-wrap" { left } else { right }
     let fig = image(wi.at("_local", default: wi.path), width: eval(w, mode: "code"))
-    wrap-content(fig, body, align: side + top, column-gutter: 1.5em)
+    wrap-content(fig, body, align: side + top, column-gutter: 0.8em)
   } else {
     body
   }

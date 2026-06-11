@@ -264,6 +264,9 @@ def create_document(
       portfolio   — visual showcase with dark cover
       letter      — formal correspondence
       journal     — editorial/magazine with auto image wrap
+      resume      — modern two-column CV (title=name, author=role; level-2
+                    sections are entries "Role — Company | dates"; skills/
+                    education/languages rubrics go to the sidebar)
 
     language: "ru" or "en" — affects hyphenation and TOC heading language
 
@@ -381,7 +384,7 @@ def add_image(
     path: str,
     caption: str = "",
     width: str = "full",
-    position: str = "center",
+    position: str = "auto",
 ) -> dict:
     """Add an image to a section.
 
@@ -397,11 +400,13 @@ def add_image(
       Or pass an explicit percentage string: "65%"
 
     position: controls placement relative to surrounding text
-      "center"     — standalone figure, full-width block (default, safe for all templates)
+      "auto"       — let the template decide from the photo's proportions (default).
+                     In journal: portraits/squares float to an alternating side and
+                     the text wraps around them; wide landscapes go full-width.
+      "center"     — force a standalone, centered figure (safe for all templates)
       "right-wrap" — image floats RIGHT, text wraps to the LEFT of it
       "left-wrap"  — image floats LEFT, text wraps to the RIGHT of it
       Note: wrap positions are ignored in academic_ru (GOST requires centered figures).
-      For journal template, images wrap automatically even without setting position.
       Wrap works best with width 30–45% and a section with at least 3–4 lines of text.
     """
     if doc_id not in _docs:

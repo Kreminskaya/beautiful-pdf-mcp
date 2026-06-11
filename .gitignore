@@ -28,3 +28,6 @@ tests/output/
 # Env
 .env
 .env.local
+
+# Local tooling
+.claude/

@@ -1,6 +1,5 @@
 // Book template — chapter-based, A5, Van de Graaf margins, long-form reading
 #import "helpers.typ": callout-box, render-table, render-code, render-gallery
-#import "@preview/wrap-it:0.1.1": wrap-content
 
 #let doc = json("assets/content.json")
 #let p = doc.at("preset", default: (:))
@@ -20,6 +19,15 @@
 #let do-number    = p.at("numbered_headings", default: false)
 #let show-toc     = p.at("show_toc", default: true)
 #let indent-str   = p.at("indent", default: "1.5em")
+// Running header & page numbers, user-controllable via preset_overrides:
+//   show_header_footer: false → no running header at all
+//   header_rule: false        → keep the header text but drop the thin line
+//   page_num_position: "auto" (book default: mirrored — number on the outer edge),
+//     "top-left"|"top-center"|"top-right"|"bottom-left"|"bottom-center"|
+//     "bottom-right"|"none"
+#let show-hf  = p.at("show_header_footer", default: true)
+#let hdr-rule = p.at("header_rule", default: true)
+#let pn-pos   = p.at("page_num_position", default: "auto")
 
 // ── Page setup (A5, mirrored Van de Graaf margins) ────────────────────────────
 // inside (binding): 20mm, top: 25mm, outside: 35mm, bottom: 40mm
@@ -28,17 +36,35 @@
   margin: (inside: 2.0cm, outside: 3.5cm, top: 2.5cm, bottom: 4.0cm),
   header: context {
     let pg = here().page()
-    if pg > 2 [
+    if show-hf and pg > 2 [
       #set text(font: heading-font, size: 7.5pt, fill: muted-color)
-      #if calc.odd(pg) [
-        #h(1fr)
-        #doc.title
+      #let num = counter(page).display("1")
+      #if pn-pos == "auto" [
+        // Classic mirrored book furniture: number rides the OUTER edge.
+        #if calc.odd(pg) [#h(1fr) #doc.title] else [#num #h(1fr)]
+      ] else if pn-pos == "top-left" [
+        #num #h(1fr) #doc.title
+      ] else if pn-pos == "top-center" [
+        #grid(columns: (1fr, auto, 1fr), align(left)[#doc.title], num, [])
+      ] else if pn-pos == "top-right" [
+        #doc.title #h(1fr) #num
       ] else [
-        #counter(page).display("1")
-        #h(1fr)
+        // bottom-* or none: header keeps only the title
+        #doc.title #h(1fr)
       ]
       #v(-3pt)
-      #line(length: 100%, stroke: 0.4pt + luma(210))
+      #if hdr-rule { line(length: 100%, stroke: 0.4pt + luma(210)) }
+    ]
+  },
+  footer: context {
+    let pg = here().page()
+    if show-hf and pg > 2 and pn-pos.starts-with("bottom") [
+      #set text(font: heading-font, size: 7.5pt, fill: muted-color)
+      #align(
+        if pn-pos == "bottom-left" { left }
+        else if pn-pos == "bottom-center" { center }
+        else { right }
+      )[#counter(page).display("1")]
     ]
   },
 )
@@ -50,21 +76,29 @@
   fill: body-color,
   lang: doc.language,
   hyphenate: true,
+  // Cheap hyphenation cost → justified lines pack tight instead of opening into
+  // rivers (large gaps between words on sparse lines).
+  costs: (hyphenation: 5%, runt: 100%, widow: 100%, orphan: 100%),
 )
 // 140% leading (Butterick optimum for book-weight text)
 #set par(
   justify: true,
   leading: eval(p.at("leading", default: "0.65em"), mode: "code"),
-  spacing: 0em,           // no space between paragraphs — use indent instead
+  spacing: 0.75em,
   first-line-indent: eval(indent-str, mode: "code"),
 )
 #show raw: set text(font: mono-font, size: 0.88em)
+#show figure.caption: it => [
+  #set text(font: heading-font, size: 0.8em, style: "italic", fill: muted-color)
+  #set par(justify: false)
+  #align(center)[#it.body]
+]
 
 // ── Heading styles ────────────────────────────────────────────────────────────
 // Chapter heading — centered, decorative rules, page break before
 #show heading.where(level: 1): it => [
   #pagebreak(weak: true)
-  #v(2.5cm)
+  #v(1.2cm)
   #align(center)[
     #set text(font: heading-font, size: h1-size, weight: "bold", fill: head-color, tracking: -0.5pt)
     #it.body
@@ -106,16 +140,16 @@
 #pagebreak()
 
 // ── TOC ───────────────────────────────────────────────────────────────────────
-#set page(numbering: "i")
-#counter(page).update(1)
 #if show-toc and doc.sections.len() > 2 [
+  #set page(numbering: "i")
+  #counter(page).update(1)
   #align(center)[
     #text(font: heading-font, size: 13pt, weight: "bold")[Содержание]
   ]
   #v(0.6em)
   #outline(title: none, indent: 1.5em, depth: 2)
+  #pagebreak()
 ]
-#pagebreak()
 
 // ── Body ──────────────────────────────────────────────────────────────────────
 #set page(numbering: "1")
@@ -132,38 +166,45 @@
   else { heading(level: 3)[#section.title] }
 
   let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
-  let body = eval(safe-content, mode: "markup")
 
-  let wrap-imgs = section.images.filter(img =>
-    img.at("position", default: "center") in ("left-wrap", "right-wrap")
-  )
-  let std-imgs = section.images.filter(img =>
-    img.at("position", default: "center") not in ("left-wrap", "right-wrap")
-  )
-
-  if wrap-imgs.len() > 0 {
-    let wi = wrap-imgs.first()
-    let w  = wi.at("width", default: "40%")
-    let side = if wi.at("position", default: "center") == "left-wrap" { left } else { right }
-    let fig = figure(
-      image(wi.at("_local", default: wi.path), width: eval(w, mode: "code")),
-      caption: if wi.at("caption", default: "") != "" { [#wi.caption] } else { none },
-      supplement: none,
-    )
-    wrap-content(fig, body, align: side + top, column-gutter: 1.5em)
-  } else {
-    body
-  }
-
-  for img in std-imgs {
-    v(0.9em)
-    let w = img.at("width", default: "100%")
+  // Books never wrap text around side floats — illustrations sit CENTERED in the
+  // column (optionally captioned), and the text simply resumes underneath, the
+  // way a printed book is set. Each illustration is interleaved INTO the chapter
+  // (not appended after it): if it doesn't fit on the current page it moves to
+  // the top of the next one and the remaining prose follows right below it, so a
+  // picture is never stranded alone on a near-empty sheet.
+  let book-fig(img) = {
+    let w = img.at("width", default: "85%")
+    if w == "full" { w = "100%" }
+    v(0.9em, weak: true)
     figure(
       image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
-      caption: if img.caption != "" { [#img.caption] } else { none },
+      caption: if img.at("caption", default: "") != "" { [#img.caption] } else { none },
       supplement: none,
     )
-    v(0.6em)
+    v(0.9em, weak: true)
+  }
+
+  if section.images.len() == 0 {
+    eval(safe-content, mode: "markup")
+  } else {
+    let paras = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
+    let imgs  = section.images
+    let n     = imgs.len()
+    let total = paras.len()
+    let cursor = 0
+    for (k, im) in imgs.enumerate() {
+      // Insertion points spread evenly through the chapter (after ~(k+1)/(n+1)).
+      let cut = calc.min(total, calc.ceil(total * (k + 1) / (n + 1)))
+      if cut > cursor {
+        eval(paras.slice(cursor, cut).join("\n\n"), mode: "markup")
+        cursor = cut
+      }
+      book-fig(im)
+    }
+    if cursor < total {
+      eval(paras.slice(cursor).join("\n\n"), mode: "markup")
+    }
   }
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }

@@ -54,6 +54,11 @@
   spacing: 0.9em,
 )
 #show raw: set text(font: mono-font, size: 0.9em)
+#show figure.caption: it => [
+  #set text(font: heading-font, size: 0.78em, fill: muted-color)
+  #set par(justify: false)
+  #align(center)[#it.body]
+]
 
 // ── Heading styles ────────────────────────────────────────────────────────────
 #show heading.where(level: 1): it => {
@@ -95,7 +100,7 @@
 // ── Table of contents ─────────────────────────────────────────────────────────
 #if show-toc and doc.sections.len() > 2 [
   #set heading(numbering: none)
-  #text(font: heading-font, size: 13pt, weight: "bold")[Contents]
+  #text(font: heading-font, size: 13pt, weight: "bold")[#if doc.language == "en" { [Contents] } else { [Содержание] }]
   #v(0.5em)
   #outline(title: none, indent: 1.5em, depth: 3)
   #pagebreak()
@@ -129,7 +134,7 @@
       caption: if wi.at("caption", default: "") != "" { [#wi.caption] } else { none },
       supplement: none,
     )
-    wrap-content(fig, body, align: side + top, column-gutter: 1.5em)
+    wrap-content(fig, body, align: side + top, column-gutter: 0.8em)
   } else {
     body
   }
