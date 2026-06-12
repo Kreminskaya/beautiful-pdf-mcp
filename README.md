@@ -1,264 +1,219 @@
-# beautiful-pdf-mcp
+<div align="center">
+  <img src="assets/banner.png" alt="beautiful-pdf-mcp — print-ready PDFs for AI agents" width="100%" />
+</div>
 
-![banner](assets/banner.png)
+# 📄 beautiful-pdf-mcp
 
-[![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Typst](https://img.shields.io/badge/typst-0.12+-orange?style=flat-square)](https://typst.app)
-[![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
+[![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Typst](https://img.shields.io/badge/typst-0.14+-239dad?style=flat-square)](https://typst.app)
+[![MCP](https://img.shields.io/badge/MCP-compatible-8a2be2?style=flat-square)](https://modelcontextprotocol.io)
+[![Templates](https://img.shields.io/badge/templates-8-c4a35a?style=flat-square)](#-templates)
 
-MCP server that gives AI agents the ability to generate **typographically correct PDFs** via [Typst](https://typst.app) — with proper fonts, margins, spacing, and layout that actually holds together.
+> MCP server that lets AI agents produce **print-ready, typographically correct PDFs** — magazine spreads, GOST lab reports, books, resumes — compiled by [Typst](https://typst.app), not an HTML export dressed up as a document.
 
-## Why
+## 🧠 The idea: the page is the unit of design
 
-I asked an AI to generate a PDF resume. The result: a photo split across three pages, a tiny font paragraph, an entire blank page, then a giant image bleeding off the margins.
+Most generated documents are built the lazy way: stack blocks on a canvas and let them fall where they may. The result is familiar — a heading stranded at the bottom of a page, an image floating in a half-empty sheet, a paragraph that trails off into nothing.
 
-The problem isn't the AI — it's that generating layout-correct documents requires knowledge of a few hundred years of typographic rules. This server encodes those rules (Butterick, Bringhurst, GOST 7.32, Van de Graaf canon) into presets and exposes them as MCP tools. The agent picks a template, adds content, and gets a PDF compiled by a real typographic engine — not an HTML export dressed up as a document.
+This engine thinks the way a magazine make-up editor does, **one page at a time**:
 
-## Templates
+1. **Budget first.** Before any text is written, `estimate_page_budget` measures how many words fit one page of the chosen template — so content is written *to size*, not trimmed after the fact.
+2. **Fill the page like a block.** Every page inside a continuous flow is composed to the bottom of the type area. The leftover text carries to the next page as plain prose — mid-sentence, even mid-hyphen, exactly like a printed book. Tails are normal; holes are not.
+3. **Verify, then ship.** Every compile returns a per-page `layout_report` (fill %, holes, defects). The agent inspects rendered pages as PNGs and fixes problems *before* the user ever sees them. `strict_layout: true` refuses to produce a defective PDF at all.
+4. **Two-pass image placement.** The compiler tracks the position of every paragraph, computes where each image actually lands, and recompiles with explicit placements — so a photo never tears the layout or strands itself on an empty page.
+
+## 📸 Showcase
+
+<div align="center">
+  <img src="docs/showcase_journal.png" alt="Journal template — editorial spread with wrapped images" width="760" />
+  <p><em>Journal: text wraps around photos, justified type with no rivers, the article flows page to page</em></p>
+</div>
+
+<div align="center">
+  <img src="docs/showcase_book.png" alt="Book template — A5, Van de Graaf margins" width="620" />
+  <p><em>Book: A5, mirrored Van de Graaf margins, chapter typography, illustrations interleaved into the story</em></p>
+</div>
+
+Two of eight templates shown — run [the test suite](#-testing) to render them all.
+
+## ✨ Features
+
+- 📐 **Page-as-canvas engine** — budget → compose → per-page QC → two-pass image placement. Every sheet is a finished block, not an accident.
+- 🖼️ **Magazine spreads** — two photos placed diagonally with one continuous text threading around both, powered by [meander](https://typst.app/universe/package/meander/); single photos get true side-wrap via [wrap-it](https://typst.app/universe/package/wrap-it/).
+- 📏 **Auto-fit single-page documents** — a short resume or letter measures itself and scales typography up until the sheet is gracefully full.
+- 🎓 **GOST 7.32 compliance** — sections on fresh pages, figures after first mention, full-width tables with captions above: Russian academic standards enforced structurally. Works in English and Russian (`language: "en"` switches Figure/Table/Contents labels).
+- ✂️ **No rivers, ever** — justified text uses aggressive hyphenation costs so lines pack tight instead of stretching into word gaps.
+- 🔁 **Deterministic re-rendering** — the document state lives in JSON; every edit re-lays-out the whole document by the rules, so nothing ever "drifts apart".
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- [Typst](https://typst.app) — `brew install typst` (or [download a release](https://github.com/typst/typst/releases))
+
+### Installation
+
+```bash
+git clone https://github.com/Kreminskaya/beautiful-pdf-mcp.git
+cd beautiful-pdf-mcp
+pip install -r requirements.txt
+```
+
+### Connect to your agent
+
+Add to your MCP client config (Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`, Cursor: `~/.cursor/mcp.json` — same JSON for any stdio MCP client):
+
+```json
+{
+  "mcpServers": {
+    "beautiful-pdf": {
+      "command": "python3",
+      "args": ["/absolute/path/to/beautiful-pdf-mcp/src/server.py"]
+    }
+  }
+}
+```
+
+Restart the client — tools appear as `beautiful-pdf__*`. Then just ask your agent:
+
+> *"Make me a magazine-style PDF article from these three photos and this text."*
+
+## 📚 Templates
 
 | Template | Use case | Format | Body font |
 |---|---|---|---|
 | `report` | Business report, analytics | A4 | Source Serif 4 |
-| `academic_ru` | Thesis, research paper (GOST 7.32) | A4 | PT Serif 14pt |
-| `book` | Long-form, non-fiction | A5 | PT Serif |
+| `academic_ru` | Thesis, lab report (GOST 7.32, en/ru) | A4 | PT Serif 14pt |
+| `book` | Long-form, fiction & non-fiction | A5 | PT Serif |
 | `technical` | API docs, developer guides | A4 | IBM Plex Sans |
 | `portfolio` | Portfolio, showcase | A4 | Noto Sans |
 | `letter` | Official correspondence | A4 | Source Sans 3 |
 | `journal` | Magazine / editorial layout | A4 | Lora + Cormorant |
 | `resume` | Modern two-column CV | A4 | IBM Plex Sans |
 
-## Layout engine: the page is the unit of design
+All 21 fonts ship with the repo — output is identical on every machine.
 
-Most generated PDFs fail the same way: blocks are dropped onto the paper one
-after another, and wherever they land, they land — half-empty pages, stranded
-images, headings glued to the bottom margin. This server is built around the
-opposite idea: **every page is composed as a complete canvas**, and whatever
-doesn't fit is carried cleanly to the next page.
+## 🛠️ How agents use it
 
-- **Magazine spreads** (`journal`) — a story with two photos lays them out
-  diagonally (one top-right, one bottom-left) and threads a single continuous
-  text around both, filling the page to the bottom. Overflow continues
-  overleaf as plain prose — no repeated heading, like a book. Powered by
-  [meander](https://typst.app/universe/package/meander/).
-- **Auto-fit single-page documents** (`resume`, `letter`) — the template
-  measures itself at several scales and picks the largest that still fits one
-  sheet, so a short CV gets bigger type and more air instead of a half-empty
-  page. Business letters scale conservatively.
-- **Standards-aware composition** (`academic_ru`) — GOST 7.32 enforced
-  structurally: each section starts on a fresh page, figures sit right after
-  their first mention with text continuing below, tables span the full text
-  measure with captions above.
-- **No rivers** — justified text uses aggressive hyphenation costs, so lines
-  pack tight instead of stretching into word gaps, even in narrow columns
-  beside wrapped photos.
+```python
+budget = estimate_page_budget(template="journal", language="en")
+# → words_per_page, lines_per_page: write the article TO BUDGET
 
-## Previews
+doc = create_document(title="Between Rock and Sky", template="journal",
+                      language="en", preset_overrides={"accent_color": "#c4a35a"})
+sid = add_section(doc_id, "On Restraint", ARTICLE_WRITTEN_TO_BUDGET, level=1)["section_id"]
+add_image(doc_id, sid, "photo1.png")      # photos embed into the running text
+add_image(doc_id, sid, "photo2.png")      # second photo → diagonal spread
 
-<table>
-<tr>
-<td><img src="tests/previews/journal.png" width="160"/><br><sub>journal</sub></td>
-<td><img src="tests/previews/resume.png" width="160"/><br><sub>resume</sub></td>
-<td><img src="tests/previews/academic_ru.png" width="160"/><br><sub>academic_ru</sub></td>
-<td><img src="tests/previews/book.png" width="160"/><br><sub>book</sub></td>
-</tr>
-<tr>
-<td><img src="tests/previews/report.png" width="160"/><br><sub>report</sub></td>
-<td><img src="tests/previews/technical.png" width="160"/><br><sub>technical</sub></td>
-<td><img src="tests/previews/portfolio.png" width="160"/><br><sub>portfolio</sub></td>
-<td><img src="tests/previews/letter.png" width="160"/><br><sub>letter</sub></td>
-</tr>
-</table>
+result = compile_preview(doc_id, pages="1-3")
+# → PNG per page + layout_report: fill % and defects for every page
 
-## Requirements
-
-- Python 3.10+
-- [Typst](https://typst.app) — `brew install typst` or [download](https://github.com/typst/typst/releases)
-- `pip install fastmcp Pillow`
-
-## Installation
-
-```bash
-git clone https://github.com/Kreminskaya/beautiful-pdf-mcp
-cd beautiful-pdf-mcp
-pip install -r requirements.txt
+compile_pdf(doc_id, "article.pdf", strict_layout=True)
+# refuses to ship a PDF with underfilled pages or layout holes
 ```
 
-Verify Typst is available:
-```bash
-typst --version  # should print 0.12.0 or higher
-```
+The loop is the point: **budget → compose → look → fix → ship**. The agent reads
+the `layout_report` numbers (words to add, lines short), inspects the rendered
+pages, and iterates until every page is a clean block.
 
-## MCP configuration
-
-Replace `/absolute/path/to/beautiful-pdf-mcp` with the real path to the cloned repo.
-
-### Claude Desktop
-
-`~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "beautiful-pdf": {
-      "command": "python3",
-      "args": ["/absolute/path/to/beautiful-pdf-mcp/src/server.py"]
-    }
-  }
-}
-```
-
-Restart Claude Desktop. You should see the tools listed below starting with `beautiful-pdf__`.
-
-### Cursor
-
-`~/.cursor/mcp.json` (or **Cursor → Settings → MCP → Add server**):
-
-```json
-{
-  "mcpServers": {
-    "beautiful-pdf": {
-      "command": "python3",
-      "args": ["/absolute/path/to/beautiful-pdf-mcp/src/server.py"]
-    }
-  }
-}
-```
-
-### Any other MCP-compatible agent
-
-Same JSON block — works with any client that supports the MCP stdio transport.
-
-## Tools
+<details>
+<summary>🧰 Full tool list (16 tools)</summary>
 
 | Tool | Description |
 |---|---|
-| `create_document` | Create a new document, returns `doc_id` |
-| `add_section` | Add a section with Markdown content |
-| `update_section` | Update title or content of an existing section |
-| `remove_section` | Remove a section from the document |
-| `add_image` | Add an image (PNG, JPG, SVG) with caption and position |
-| `add_gallery` | Add a grid of images — auto-distributes across columns |
-| `add_table` | Add a table with headers and rows |
-| `add_code_block` | Add a syntax-highlighted code block |
-| `add_callout` | Add a callout box (info / warning / tip / danger / quote) |
-| `compile_preview` | Render pages as PNG — check layout before final compile |
-| `compile_pdf` | Compile the final PDF |
-| `save_document` | Export document state to JSON for persistence |
-| `load_document` | Restore a previously saved document |
-| `get_document_state` | Inspect current document state |
-| `list_documents` | List all active documents in session |
+| `estimate_page_budget` | Words/lines that fit one page of a template — call before writing |
+| `create_document` | Create a document, returns `doc_id` |
+| `add_section` | Add a section (Markdown content) |
+| `update_section` | Update a section's title or text |
+| `remove_section` | Remove a section |
+| `add_image` | Image with optional caption, width, position (`auto`, `after:N`, wraps, `top`) |
+| `add_gallery` | Grid of images |
+| `add_table` | Table with headers and rows |
+| `add_code_block` | Syntax-highlighted code |
+| `add_callout` | Callout box (info / warning / tip / danger / quote) |
+| `compile_preview` | Render pages to PNG + per-page `layout_report` QC |
+| `compile_pdf` | Final PDF; `strict_layout=True` fails on layout defects |
+| `save_document` / `load_document` | Persist / restore document state as JSON |
+| `get_document_state` / `list_documents` | Inspect session state |
 
-## Usage
+</details>
 
-```python
-# Create a document
-doc = create_document(
-    title="Q2 2025 Report",
-    author="Natalie",
-    template="report",
-    language="en",
-    preset_overrides={"accent_color": "#e63946"}  # custom accent colour
-)
-doc_id = doc["doc_id"]
+<details>
+<summary>🎛️ Per-document style overrides</summary>
 
-# Add sections with Markdown content
-s1 = add_section(doc_id, "Introduction", "**Key findings** from this quarter.", level=1)
-add_callout(doc_id, s1["section_id"], "Revenue grew 18% QoQ — ahead of forecast.", kind="tip")
-
-s2 = add_section(doc_id, "Data", "Results by region.", level=1)
-add_table(doc_id, s2["section_id"],
-    headers=["Region", "Revenue", "Growth"],
-    rows=[["EMEA", "$4.2M", "+18%"], ["APAC", "$3.1M", "+31%"]],
-    caption="Q2 revenue by region"
-)
-
-# Add images — centered (default) or wrapping around text
-add_image(doc_id, s2["section_id"],
-    path="/path/to/chart.png",
-    caption="Figure 1. Revenue trend",
-    width="large"
-)
-add_image(doc_id, s2["section_id"],
-    path="/path/to/portrait.png",
-    width="35%",
-    position="right-wrap"   # text flows left of the image
-)
-
-# Gallery: multiple images in a grid
-s3 = add_section(doc_id, "Portfolio", "Selected work.", level=1)
-add_gallery(doc_id, s3["section_id"],
-    paths=["/img1.png", "/img2.png", "/img3.png", "/img4.png"],
-    columns=2,
-    caption="Project screenshots"
-)
-
-# Always preview before final compile
-preview = compile_preview(doc_id, pages="1-3")
-
-# Save state (survives agent restarts)
-save_document(doc_id, "~/Desktop/report.json")
-
-# Compile final PDF
-pdf = compile_pdf(doc_id, output_path="~/Desktop/report.pdf")
-```
-
-## Image positioning
-
-| `position` | Behaviour | Available in |
-|---|---|---|
-| `"center"` (default) | Standalone centered figure | all templates |
-| `"right-wrap"` | Text wraps to the left of the image | report, book, technical, portfolio, letter, journal |
-| `"left-wrap"` | Text wraps to the right of the image | same as above |
-
-`academic_ru` always places images centered — GOST 7.32 does not allow text wrap around figures.
-
-`journal` wraps images automatically by default (alternating sides), without specifying `position` per image. Use `position="center"` to force a standalone figure.
-
-## Fonts
-
-21 font files bundled in `assets/fonts/` — no system fonts required:
-
-| Family | Fonts | Character |
-|---|---|---|
-| **PT** | PT Serif, PT Sans, PT Mono | Full Cyrillic, GOST-compliant |
-| **Source** | Source Serif 4, Source Sans 3, Source Code Pro | Professional quality (Adobe) |
-| **IBM Plex** | Plex Serif, Plex Sans, Plex Mono | Technical, high-legibility |
-| **Noto** | Noto Serif, Noto Sans | Maximum Unicode coverage |
-| **Editorial** | Lora, Cormorant | Warm calligraphic pair for journal |
-
-All fonts are open source (SIL OFL / Apache 2.0).
-
-## Style system
-
-Typographic parameters are defined in `data/styles.json` — body size, leading, margins, heading sizes, accent colours. Each template maps to a preset. Edit the JSON to customize any preset without touching the templates.
-
-### Per-document overrides
-
-Pass any typographic parameter directly to `create_document` — no file editing needed:
+Any preset key can be overridden per document via `preset_overrides`:
 
 ```python
-doc = create_document(
-    title="Annual Review",
-    template="report",
-    preset_overrides={
-        "accent_color":  "#2a9d8f",
-        "heading_color": "#264653",
-        "body_font":     "PT Serif",
-        "show_toc":      False,
-        "margin_left":   "3.0cm",
-    }
-)
+create_document(..., preset_overrides={
+    "accent_color": "#2a9d8f",        # brand colour
+    "page_num_position": "bottom-center",  # or top-left … bottom-right, none
+    "header_rule": False,             # drop the thin running-header line
+    "show_header_footer": False,      # no furniture at all
+    "body_font": "PT Serif",
+    "margin_left": "3.5cm",
+})
 ```
 
-Overridable keys: `accent_color`, `heading_color`, `muted_color`, `body_color`, `body_font`, `heading_font`, `mono_font`, `text_size`, `h1_size`, `h2_size`, `h3_size`, `margin_left`, `margin_right`, `margin_top`, `margin_bottom`, `leading`, `show_toc`, `show_header_footer`, `numbered_headings`.
+</details>
 
-Built-in colour themes in `data/styles.json` → `color_themes`: `navy`, `ibm-blue`, `teal`, `emerald`, `amber`, `violet`, `crimson`, `slate`, `classic`, `monochrome`.
+<details>
+<summary>📐 How the page engine works</summary>
 
-## Agent workflow
+Each template declares a **page contract** (`data/styles.json`): what a finished
+page looks like for that genre — fill thresholds, tolerated underfill, whether a
+final chapter page may end early (a book chapter can; a hole mid-article cannot).
 
-See [`SKILL.md`](SKILL.md) for the recommended workflow and an antipattern checklist (widows, orphans, hanging headings, corridor spacing).
+Compilation is **two-pass**: pass 1 renders the document with invisible
+per-paragraph position marks, the server queries where every paragraph and image
+actually landed, computes optimal `after:N` anchors for `position: "auto"`
+images, and pass 2 recompiles with explicit placements. The QC
+(`src/layout_qc.py`) then grades every page against the contract and reports
+exact numbers — *"page 3: 6 lines short, add ~40 words"* — so the agent can fix
+layout arithmetically instead of guessing.
 
-## License
+The full specification lives in [docs/SPEC_PAGE_FILL.md](docs/SPEC_PAGE_FILL.md)
+(in Russian — the project's design constitution is [CONCEPT.md](CONCEPT.md)).
 
-MIT
+</details>
+
+## 🧪 Testing
+
+```bash
+python3 tests/render_all.py            # render every template to PNG + page QC
+python3 tests/render_all.py journal    # one template
+python3 tests/render_all.py showcase   # hand-finished showcase documents
+```
+
+Every page of every template is rendered to `tests/output/` and graded by the
+page-fill QC — the test fails if any page violates its template's contract.
+
+## 🗺️ Roadmap
+
+- [x] 8 templates with shipped fonts
+- [x] Page-as-canvas layout engine (meander spreads, auto-fit, GOST structure)
+- [x] Page budget + per-page fill QC + `strict_layout`
+- [x] Two-pass compilation with automatic image placement
+- [ ] Bibliography tool with GOST citation style (`gost-r-705-2008-numeric`)
+- [ ] Typst 0.15 upgrade (multiple bibliographies, variable fonts)
+- [ ] Decorative drop caps for the book template
+- [ ] More CV layouts (single-column, photo-left)
+
+## 🧱 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Typesetting | [Typst](https://typst.app) 0.14+, [meander](https://typst.app/universe/package/meander/), [wrap-it](https://typst.app/universe/package/wrap-it/) |
+| Server | Python, [FastMCP](https://github.com/jlowin/fastmcp) |
+| Layout QC | `typst query` position marks + per-page fill grading |
+| Imaging | Pillow (aspect detection, preview pipeline) |
+| Fonts | PT, IBM Plex, Source, Noto, Lora, Cormorant — bundled |
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+⭐️ If this saves you from one more ugly AI-generated PDF — star the repo!

@@ -77,6 +77,55 @@
   v(0.8em)
 }
 
+// render-body-with-marks — универсальный рендерер тела секции (Stage-3, §3.3).
+// Делит контент по абзацам, вставляет изображения в позиции "after:N"
+// (или равномерно при "auto"), ставит метку <bp-para> после каждого абзаца
+// — для двухпасового компилятора в server.py.
+//
+//   safe-content  строка, уже escapeнная для Typst
+//   images        массив image-dict; НЕ передавайте top- и wrap-изображения
+//   si            индекс секции (0-based) — записывается в метку
+//   fig-fn        function(img) → content — рендерит одно изображение
+#let render-body-with-marks(safe-content, images, si, fig-fn) = {
+  let paras = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
+  let total = paras.len()
+  let n = images.len()
+  // Метка обёрнута в box() — это настоящий инлайн, не создаёт block-break.
+  // context[...] без box принудительно разрывает абзац и удваивает spacing.
+  let with-mark(pi) = (
+    paras.at(pi)
+    + "#box(context[#metadata((sec: " + str(si)
+    + ", para: " + str(pi)
+    + ", pos: here().position())) <bp-para>])"
+  )
+
+  // Чанк абзацев [from, to) eval'ится КАК ОДНА СТРОКА через join("\n\n") —
+  // это сохраняет оригинальный spacing (как если бы marks не было вовсе).
+  let render-chunk(from, to) = {
+    if from < to {
+      eval(range(from, to).map(with-mark).join("\n\n"), mode: "markup")
+    }
+  }
+
+  if n == 0 {
+    render-chunk(0, total)
+  } else {
+    let cursor = 0
+    for (k, im) in images.enumerate() {
+      let pos-str = im.at("position", default: "auto")
+      let cut = if pos-str.starts-with("after:") {
+        calc.min(total, calc.max(0, int(pos-str.slice(6))))
+      } else {
+        calc.min(total, calc.ceil(total * (k + 1) / (n + 1)))
+      }
+      render-chunk(cursor, cut)
+      cursor = cut
+      fig-fn(im)
+    }
+    render-chunk(cursor, total)
+  }
+}
+
 #let render-code(cb, mono-font) = {
   v(0.6em)
   block(

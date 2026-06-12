@@ -41,7 +41,7 @@
       #let num = counter(page).display("1")
       #if pn-pos == "auto" [
         // Classic mirrored book furniture: number rides the OUTER edge.
-        #if calc.odd(pg) [#h(1fr) #doc.title] else [#num #h(1fr)]
+        #if calc.odd(pg) [#doc.title #h(1fr) #num] else [#num #h(1fr) #doc.title]
       ] else if pn-pos == "top-left" [
         #num #h(1fr) #doc.title
       ] else if pn-pos == "top-center" [
@@ -159,9 +159,13 @@
   set heading(numbering: "1.1")
 }
 
-#for section in doc.sections {
+#for (si, section) in doc.sections.enumerate() {
   let lvl = section.level
-  if lvl == 1 { heading(level: 1)[#section.title] }
+  if lvl == 1 {
+    heading(level: 1)[#section.title]
+    // метка начала главы для постраничного QC (docs/SPEC_PAGE_FILL.md)
+    context [#metadata(here().position()) <bp-sec>]
+  }
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
@@ -185,27 +189,43 @@
     v(0.9em, weak: true)
   }
 
-  if section.images.len() == 0 {
-    eval(safe-content, mode: "markup")
-  } else {
-    let paras = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
-    let imgs  = section.images
-    let n     = imgs.len()
-    let total = paras.len()
-    let cursor = 0
-    for (k, im) in imgs.enumerate() {
-      // Insertion points spread evenly through the chapter (after ~(k+1)/(n+1)).
-      let cut = calc.min(total, calc.ceil(total * (k + 1) / (n + 1)))
-      if cut > cursor {
-        eval(paras.slice(cursor, cut).join("\n\n"), mode: "markup")
-        cursor = cut
-      }
-      book-fig(im)
-    }
-    if cursor < total {
-      eval(paras.slice(cursor).join("\n\n"), mode: "markup")
+  // position "top" → the illustration opens the chapter, BEFORE any text
+  // (frontispiece, the way picture books start). The rest interleave evenly.
+  let top-imgs  = section.images.filter(im => im.at("position", default: "auto") == "top")
+  let flow-imgs = section.images.filter(im => im.at("position", default: "auto") != "top")
+
+  for im in top-imgs { book-fig(im) }
+
+  // Split by paragraph for Stage-3 <bp-para> marks and after:N interleaving.
+  // Inline mark appended to each para; chunk is eval'd as ONE string via join("\n\n")
+  // to preserve the original paragraph spacing (same as eval'ing the whole block).
+  let paras  = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
+  let total  = paras.len()
+  let with-mark(pi) = (
+    paras.at(pi)
+    + "#box(context[#metadata((sec: " + str(si)
+    + ", para: " + str(pi)
+    + ", pos: here().position())) <bp-para>])"
+  )
+  let render-chunk(from, to) = {
+    if from < to {
+      eval(range(from, to).map(with-mark).join("\n\n"), mode: "markup")
     }
   }
+  let n      = flow-imgs.len()
+  let cursor = 0
+  for (k, im) in flow-imgs.enumerate() {
+    let pos = im.at("position", default: "auto")
+    let cut = if pos.starts-with("after:") {
+      calc.min(total, calc.max(0, int(pos.slice(6))))
+    } else {
+      calc.min(total, calc.ceil(total * (k + 1) / (n + 1)))
+    }
+    render-chunk(cursor, cut)
+    cursor = cut
+    book-fig(im)
+  }
+  render-chunk(cursor, total)
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }
   for tbl in section.tables { render-table(tbl) }

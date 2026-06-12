@@ -31,3 +31,4 @@ tests/output/
 
 # Local tooling
 .claude/
+tests/previews/

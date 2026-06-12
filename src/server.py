@@ -48,7 +48,9 @@ Write #footnote[explanation text] inline in section content to get a proper
 footnote number in the text and the note at the bottom of the page.
 """
 
+import hashlib
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -59,6 +61,8 @@ from pathlib import Path
 from fastmcp import FastMCP
 from PIL import Image
 
+import layout_qc
+
 mcp = FastMCP("beautiful-pdf")
 
 # In-memory document store: doc_id → DocumentState
@@ -68,6 +72,7 @@ TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"
 STYLES_FILE = Path(__file__).parent.parent / "data" / "styles.json"
+CALIBRATION_FILE = Path(__file__).parent.parent / "data" / "calibration.json"
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -235,6 +240,320 @@ def _compile_typst(doc_id: str, output_format: str = "pdf",
         raise RuntimeError(f"Typst error:\n{result.stderr}")
 
     return out_path
+
+
+# ─── «Страница = блок»: QC и бюджет (docs/SPEC_PAGE_FILL.md) ─────────────────
+
+def _layout_report(doc_id: str) -> dict:
+    """Постраничный QC последней компиляции: заполненность, недоливы, дыры."""
+    doc = _docs[doc_id]
+    work_dir = Path(doc["work_dir"])
+    main_typ = work_dir / "main.typ"
+    if not main_typ.exists():
+        return {"ok": None, "summary": "документ ещё не компилировался"}
+
+    for old in work_dir.glob("measure_*.png"):
+        old.unlink()
+    result = subprocess.run(
+        ["typst", "compile", "--font-path", str(FONTS_DIR),
+         "--format", "png", "--ppi", "96",
+         str(main_typ), str(work_dir / "measure_{0p}.png")],
+        capture_output=True, text=True, cwd=str(work_dir),
+    )
+    if result.returncode != 0:
+        return {"ok": None, "summary": f"замер не удался: {result.stderr[:300]}"}
+
+    pngs = [str(p) for p in sorted(work_dir.glob("measure_*.png"))]
+    section_pages = layout_qc.query_section_pages(main_typ, FONTS_DIR, work_dir)
+    contract = layout_qc.load_contract(STYLES_FILE, doc["template"])
+
+    words_per_line = None
+    calib = _calibration_lookup(doc["template"], doc.get("language", "ru"),
+                                doc["preset"])
+    if calib:
+        words_per_line = calib.get("words_per_line")
+
+    return layout_qc.analyze_document(pngs, doc["preset"], contract,
+                                      section_pages,
+                                      words_per_line=words_per_line)
+
+
+_CALIB_KEYS = ("paper", "margin_left", "margin_right", "margin_top",
+               "margin_bottom", "text_size", "leading", "body_font",
+               "justify", "hyphenate", "show_toc")
+
+
+def _calibration_key(template: str, language: str, preset: dict) -> str:
+    relevant = {k: preset.get(k) for k in _CALIB_KEYS}
+    tmpl = TEMPLATES_DIR / f"{template}.typ"
+    mtime = tmpl.stat().st_mtime_ns if tmpl.exists() else 0
+    sha = hashlib.sha256(
+        (json.dumps(relevant, sort_keys=True) + str(mtime)
+         + f"qc{layout_qc.QC_VERSION}").encode()
+    ).hexdigest()[:16]
+    return f"{template}:{language}:{sha}"
+
+
+def _calibration_lookup(template: str, language: str, preset: dict) -> dict | None:
+    try:
+        cache = json.loads(CALIBRATION_FILE.read_text(encoding="utf-8"))
+        return cache.get(_calibration_key(template, language, preset))
+    except Exception:
+        return None
+
+
+_LOREM_EN = ("the quiet morning light settled over rooftops while distant "
+             "voices carried news of small ordinary things a kettle warmed "
+             "someone laughed behind a curtain and the street below kept its "
+             "steady unhurried rhythm pages turned in another room").split()
+_LOREM_RU = ("тихое утро медленно поднималось над крышами пока далёкие голоса "
+             "приносили новости о простых обыденных вещах грелся чайник кто-то "
+             "смеялся за занавеской а улица внизу хранила свой ровный "
+             "неторопливый ритм в соседней комнате шелестели страницы").split()
+
+
+def _calibrate(template: str, language: str, preset: dict) -> dict:
+    """Эмпирическая калибровка ёмкости страницы: компилируем lorem и меряем."""
+    vocab = _LOREM_RU if language == "ru" else _LOREM_EN
+    total_words = 1800
+    words, paras, line = [], [], 0
+    for i in range(total_words):
+        words.append(vocab[i % len(vocab)])
+        if len(words) >= 85:
+            paras.append(" ".join(words) + ".")
+            words = []
+    if words:
+        paras.append(" ".join(words) + ".")
+    lorem = "\n\n".join(paras)
+
+    doc_id = "calib_" + uuid.uuid4().hex[:6]
+    work_dir = Path(tempfile.mkdtemp(prefix=f"pdf_{doc_id}_"))
+    _docs[doc_id] = {
+        "doc_id": doc_id, "title": "Calibration", "author": "",
+        "template": template, "language": language, "preset": dict(preset),
+        "sections": [{"id": "s1", "title": "Calibration", "level": 1,
+                      "content": lorem, "images": [], "galleries": [],
+                      "tables": [], "code_blocks": [], "callouts": []}],
+        "work_dir": str(work_dir),
+    }
+    try:
+        _compile_typst(doc_id, output_format="png", pages="1-")
+        main_typ = work_dir / "main.typ"
+        pngs = [str(p) for p in sorted(work_dir.glob("preview_*.png"))]
+        if not pngs:
+            pngs = [str(work_dir / "preview.png")]
+        section_pages = layout_qc.query_section_pages(main_typ, FONTS_DIR,
+                                                      work_dir)
+        geom = layout_qc.geometry_from_preset(preset)
+        content_start = min(section_pages) if section_pages else 1
+
+        fills, lines_counts, leadings = [], [], []
+        for i, png in enumerate(pngs, start=1):
+            if i < content_start:
+                continue
+            m = layout_qc.measure_page(png, geom)
+            if m["empty"]:
+                continue
+            fills.append(m["fill"])
+            lines_counts.append(m["n_lines"])
+            if m["leading_mm"]:
+                leadings.append(m["leading_mm"])
+
+        if not fills:
+            raise RuntimeError("калибровка: контентные страницы не найдены")
+
+        full_lines = [n for f, n in zip(fills, lines_counts) if f >= 0.9]
+        lines_per_page = max(full_lines) if full_lines else max(lines_counts)
+        words_per_page = round(total_words / sum(fills))
+        leading_mm = round(sum(leadings) / len(leadings), 2) if leadings else None
+        chars_per_line = round(len(lorem) / max(1, sum(lines_counts)), 1)
+
+        return {
+            "template": template,
+            "language": language,
+            "words_per_page": words_per_page,
+            "lines_per_page": lines_per_page,
+            "words_per_line": round(words_per_page / lines_per_page, 1),
+            "chars_per_line": chars_per_line,
+            "leading_mm": leading_mm,
+            "text_width_mm": round(geom["paper_w"] - geom["m_left"]
+                                   - geom["m_right"], 1),
+            "type_height_mm": round(geom["paper_h"] - geom["m_top"]
+                                    - geom["m_bottom"], 1),
+        }
+    finally:
+        _docs.pop(doc_id, None)
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+@mcp.tool()
+def estimate_page_budget(template: str = "report", language: str = "en",
+                         preset_overrides: dict | None = None) -> dict:
+    """Page capacity: how much text fits ONE page of this template.
+
+    ALWAYS call this BEFORE writing content and write text TO BUDGET:
+      target_words = pages_wanted × words_per_page − Σ image_displacement
+    where image_displacement (in words) for an image of width_pct (0..1)
+    and aspect (w/h) ≈
+      ceil((width_pct × text_width_mm / aspect + 8) / leading_mm) × words_per_line.
+
+    The page-fill rule («страница = блок», docs/SPEC_PAGE_FILL.md): every page
+    inside a continuous flow must be filled to the bottom of the type area.
+    Sizing the text to budget BEFORE compiling is what makes that possible.
+    Results are calibrated empirically per template+preset and cached.
+    """
+    preset = _load_preset(template)
+    if preset_overrides:
+        preset.update(preset_overrides)
+
+    key = _calibration_key(template, language, preset)
+    try:
+        cache = json.loads(CALIBRATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        cache = {}
+
+    if key not in cache:
+        cache[key] = _calibrate(template, language, preset)
+        CALIBRATION_FILE.write_text(
+            json.dumps(cache, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+
+    entry = dict(cache[key])
+    entry["usage"] = (
+        "target_words = pages × words_per_page − Σ вытеснение картинок; "
+        "вытеснение(строк) = ceil((width_pct × text_width_mm / aspect + 8) "
+        "/ leading_mm)")
+    return entry
+
+
+def _parse_width_pct(width_str: str) -> float:
+    """'85%' → 0.85. Значения уже прошли через _image_width_to_typst → всегда '%'."""
+    if isinstance(width_str, str) and width_str.endswith("%"):
+        return float(width_str[:-1]) / 100.0
+    return 0.85
+
+
+def _compute_auto_positions(doc_id: str, para_map: list[dict]) -> bool:
+    """Серверная расстановка after:N для изображений с position='auto' (SPEC §3.3).
+
+    Использует позиции абзацев из паса 1, чтобы найти точки вставки, при которых
+    изображение либо умещается в остаток страницы, либо начинается с её верха,
+    не оставляя дыры. Изменяет _docs на месте. Возвращает True при изменениях.
+    """
+    doc = _docs[doc_id]
+    preset = doc["preset"]
+    geom = layout_qc.geometry_from_preset(preset)
+    calib = _calibration_lookup(doc["template"], doc.get("language", "ru"), preset)
+    if not calib:
+        return False
+
+    leading_mm = calib.get("leading_mm") or layout_qc.FALLBACK_LEADING_MM
+    type_h_mm = calib["type_height_mm"]
+
+    # (sec_idx) → список (para_idx, page, remaining_mm в полосе набора)
+    sec_paras: dict[int, list] = {}
+    for e in para_map:
+        y_in_ta = max(0.0, e["y_mm"] - geom["m_top"])
+        remaining = max(0.0, type_h_mm - y_in_ta)
+        sec_paras.setdefault(e["sec"], []).append(
+            (e["para"], e["page"], remaining))
+
+    changed = False
+    for si, section in enumerate(doc["sections"]):
+        auto_imgs = [(ii, img) for ii, img in enumerate(section.get("images", []))
+                     if img.get("position", "auto") == "auto"]
+        if not auto_imgs or si not in sec_paras:
+            continue
+
+        info = sorted(sec_paras[si], key=lambda x: x[0])
+        total = len(info)
+        if total == 0:
+            continue
+        n_auto = len(auto_imgs)
+
+        for img_k, (_, img) in enumerate(auto_imgs):
+            # Высота блока: картинка + подпись + 2 строки отбивки
+            w_pct = _parse_width_pct(img.get("width", "85%"))
+            img_h_mm = w_pct * calib["text_width_mm"] * img.get("aspect", 0.75)
+            caption_mm = 5.0 if img.get("caption") else 0.0
+            block_h = img_h_mm + caption_mm + 2 * leading_mm
+            need_after = 2 * leading_mm  # минимум текста после картинки
+
+            # Натуральная позиция (равномерное распределение)
+            nat_idx = min(total - 1, round(total * (img_k + 1) / (n_auto + 1)))
+            pi_nat, page_nat, rem_nat = info[nat_idx]
+
+            if rem_nat >= block_h + need_after:
+                # Вмещается в натуральной точке
+                img["position"] = f"after:{pi_nat}"
+            else:
+                # Не влезает → ставим после ПОСЛЕДНЕГО абзаца предыдущей страницы,
+                # чтобы картинка начиналась с верха следующей (дыры нет).
+                last_prev = None
+                for pi, page, _ in info:
+                    if page < page_nat:
+                        last_prev = pi
+                    elif page == page_nat:
+                        break
+                if last_prev is not None:
+                    img["position"] = f"after:{last_prev}"
+                else:
+                    # Всё на первой странице — ищем первый абзац с достаточным остатком
+                    found = False
+                    for pi, _, rem in info:
+                        if rem >= block_h + need_after:
+                            img["position"] = f"after:{pi}"
+                            found = True
+                            break
+                    if not found:
+                        continue  # картинка огромная — Typst решит сам
+            changed = True
+
+    return changed
+
+
+def _two_pass_compile(doc_id: str, output_format: str = "pdf",
+                      pages: str = "1") -> "Path":
+    """Двухпасовая компиляция: пас 1 → query <bp-para> → after:N → пас 2.
+
+    Вычисляет оптимальные позиции картинок server-side (SPEC_PAGE_FILL.md §3.5).
+    Исходные 'auto' позиции восстанавливаются в _docs после компиляции.
+    Откатывается к однопасовой, если шаблон не содержит меток <bp-para>.
+    """
+    doc = _docs[doc_id]
+    has_auto = any(
+        img.get("position", "auto") == "auto"
+        for sec in doc.get("sections", [])
+        for img in sec.get("images", [])
+    )
+    if not has_auto:
+        return _compile_typst(doc_id, output_format, pages)
+
+    out = _compile_typst(doc_id, output_format, pages)
+    work_dir = Path(doc["work_dir"])
+    para_map = layout_qc.query_para_positions(
+        work_dir / "main.typ", FONTS_DIR, work_dir)
+    if not para_map:
+        return out  # шаблон без <bp-para> меток — работаем в один пас
+
+    # Сохраняем оригинальные позиции
+    orig: dict[tuple[int, int], str] = {
+        (si, ii): img.get("position", "auto")
+        for si, sec in enumerate(doc["sections"])
+        for ii, img in enumerate(sec.get("images", []))
+    }
+
+    changed = _compute_auto_positions(doc_id, para_map)
+    if changed:
+        try:
+            out = _compile_typst(doc_id, output_format, pages)
+        finally:
+            # Возвращаем auto — _docs остаётся декларативным
+            for si, sec in enumerate(doc["sections"]):
+                for ii, img in enumerate(sec.get("images", [])):
+                    if orig.get((si, ii)) == "auto":
+                        img["position"] = "auto"
+    return out
 
 
 def _find_section(doc_id: str, section_id: str) -> dict:
@@ -598,7 +917,7 @@ def compile_preview(doc_id: str, pages: str = "1-3") -> dict:
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
-    out_path = _compile_typst(doc_id, output_format="png", pages=pages)
+    out_path = _two_pass_compile(doc_id, output_format="png", pages=pages)
 
     # Collect all generated PNG files
     work_dir = out_path.parent
@@ -620,32 +939,53 @@ def compile_preview(doc_id: str, pages: str = "1-3") -> dict:
             if plain.exists():
                 png_paths = [str(plain)]
 
+    report = _layout_report(doc_id)
+    qc_note = ""
+    if report.get("ok") is False:
+        qc_note = (" ВНИМАНИЕ, дефекты вёрстки — " + report["summary"] +
+                   ". Исправь по числам из layout_report (words_to_add/"
+                   "lines_short), затем preview снова.")
     return {
         "preview_path": png_paths[0] if png_paths else str(out_path),
         "preview_paths": png_paths,
         "page_count": len(png_paths),
+        "layout_report": report,
         "message": (
             f"Preview ready: {len(png_paths)} page(s). "
-            f"Open each path to check layout before compile_pdf."
+            f"Open each path to check layout before compile_pdf." + qc_note
         ),
     }
 
 
 @mcp.tool()
-def compile_pdf(doc_id: str, output_path: str = "") -> dict:
+def compile_pdf(doc_id: str, output_path: str = "",
+                strict_layout: bool = False) -> dict:
     """Compile the final PDF and return its path.
 
     output_path: where to save the PDF, e.g. "~/Desktop/report.pdf"
                  If omitted, saved to a temp directory (path is returned).
                  Always specify output_path so the user can easily find the file.
 
+    strict_layout: if true, refuse to produce the PDF when the page-fill QC
+                 («страница = блок») finds defects — underfilled pages, holes,
+                 unbalanced columns. The error carries the per-page numbers.
+                 Use for anything that will be shown or sent to people.
+
     After compiling, call save_document to persist the document state —
-    without it the document is lost if Claude Desktop restarts.
+    without it the document is lost if the MCP client restarts.
     """
     if doc_id not in _docs:
         raise ValueError(f"Document {doc_id} not found")
 
-    pdf_path = _compile_typst(doc_id, output_format="pdf")
+    pdf_path = _two_pass_compile(doc_id, output_format="pdf")
+    report = _layout_report(doc_id)
+
+    if strict_layout and report.get("ok") is False:
+        details = json.dumps(
+            [p for p in report["pages"] if p.get("issues")],
+            ensure_ascii=False)
+        raise ValueError(
+            f"strict_layout: {report['summary']}. Дефекты: {details}")
 
     if output_path:
         dest = Path(output_path).expanduser()
@@ -653,9 +993,12 @@ def compile_pdf(doc_id: str, output_path: str = "") -> dict:
         shutil.copy2(pdf_path, dest)
         pdf_path = dest
 
+    qc_note = ("" if report.get("ok") is not False
+               else f" ВНИМАНИЕ: {report['summary']}")
     return {
         "pdf_path": str(pdf_path),
-        "message": f"PDF ready: {pdf_path}",
+        "layout_report": report,
+        "message": f"PDF ready: {pdf_path}." + qc_note,
     }
 
 
@@ -665,7 +1008,7 @@ def save_document(doc_id: str, path: str) -> dict:
 
     path: where to save, e.g. "~/Desktop/my_report.json"
 
-    Call this after every compile_pdf. If Claude Desktop restarts, the in-memory
+    Call this after every compile_pdf. If the MCP client restarts, the in-memory
     document is lost — use load_document(path) to restore it and continue editing.
     """
     if doc_id not in _docs:
@@ -681,7 +1024,7 @@ def save_document(doc_id: str, path: str) -> dict:
 
 @mcp.tool()
 def load_document(path: str) -> dict:
-    """Restore a document saved with save_document. Use after a Claude Desktop restart.
+    """Restore a document saved with save_document. Use after an MCP client restart.
 
     path: path to the JSON file created by save_document
     Returns doc_id — use it with add_section, compile_pdf etc. to continue editing.

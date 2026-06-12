@@ -44,7 +44,13 @@
         "numbered": true
       },
       "toc": true,
-      "header_footer": true
+      "header_footer": true,
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": false,
+        "final_page_policy": "min_fill",
+        "min_final_fill": 0.5
+      }
     },
     "academic_ru": {
       "name": "Академический (ГОСТ)",
@@ -90,7 +96,13 @@
       },
       "toc": true,
       "header_footer": true,
-      "indent": "1.25cm"
+      "indent": "1.25cm",
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": true,
+        "final_page_policy": "partial_ok",
+        "_comment": "разделы с нового листа по ГОСТ 7.32 — частичный конец раздела легален"
+      }
     },
     "book": {
       "name": "Книга / Non-fiction",
@@ -137,7 +149,14 @@
       "toc": true,
       "header_footer": true,
       "chapter_break": true,
-      "indent": "1.5em"
+      "indent": "1.5em",
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": true,
+        "final_page_policy": "partial_ok",
+        "underfill_tolerance_lines": 6.0,
+        "_comment": "главы заканчиваются где угодно; tolerance 6 строк — изображения в auto-позиции до двухпасового прохода дают законную дыру"
+      }
     },
     "technical": {
       "name": "Техническая документация",
@@ -183,7 +202,14 @@
       },
       "toc": true,
       "header_footer": true,
-      "code_line_numbers": true
+      "code_line_numbers": true,
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": false,
+        "final_page_policy": "min_fill",
+        "min_final_fill": 0.5,
+        "underfill_tolerance_lines": 3.0
+      }
     },
     "portfolio": {
       "name": "Портфолио / Презентационный",
@@ -229,7 +255,15 @@
       },
       "toc": false,
       "header_footer": true,
-      "dark_cover": true
+      "dark_cover": true,
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": false,
+        "final_page_policy": "partial_ok",
+        "underfill_tolerance_lines": 22.0,
+        "max_hole_lines": 4.0,
+        "_comment": "портфолио: галереи и wrap-фото дают законный воздух; финал частичный по природе"
+      }
     },
     "journal": {
       "name": "Журнал / Редакционный",
@@ -275,7 +309,14 @@
       },
       "toc": false,
       "header_footer": true,
-      "wrap_images": true
+      "wrap_images": true,
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": true,
+        "final_page_policy": "partial_ok",
+        "underfill_tolerance_lines": 10.0,
+        "_comment": "журнал: meander + wrap — сложная вёрстка с картинками; финал статьи частичный по природе"
+      }
     },
     "letter": {
       "name": "Деловое письмо",
@@ -320,7 +361,13 @@
         "numbered": false
       },
       "toc": false,
-      "header_footer": false
+      "header_footer": false,
+      "page_contract": {
+        "columns": 1,
+        "section_breaks": false,
+        "final_page_policy": "partial_ok",
+        "_comment": "письмо частичное по природе"
+      }
     },
     "resume": {
       "name": "Резюме / CV",
@@ -359,7 +406,13 @@
         "h3_size": "11pt"
       },
       "toc": false,
-      "header_footer": false
+      "header_footer": false,
+      "page_contract": {
+        "columns": 2,
+        "section_breaks": false,
+        "final_page_policy": "balance_columns",
+        "column_balance_lines": 3.0
+      }
     }
   },
   "color_themes": {

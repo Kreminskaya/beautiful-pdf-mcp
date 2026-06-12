@@ -24,7 +24,7 @@
 // The table spans the full text measure (1fr columns) so it reads as a solid
 // block of the page, with generous air before and after — not a cramped strip
 // glued to the paragraph above it.
-#let render-table-gost(tbl) = {
+#let render-table-gost(tbl, lang: "ru") = {
   v(1.4em, weak: true)
   let col-count = tbl.headers.len()
   figure(
@@ -37,7 +37,7 @@
       ..tbl.rows.flatten().map(cell => [#cell]),
     ),
     caption: if tbl.caption != "" { [ — #tbl.caption] } else { [] },
-    supplement: [Таблица],
+    supplement: if lang == "en" { [Table] } else { [Таблица] },
     gap: 0.65em,
   )
   v(1.4em, weak: true)
@@ -159,7 +159,9 @@
 #if show-toc and doc.sections.len() > 2 [
   #set heading(numbering: none)
   #align(center)[
-    #text(font: heading-font, size: 14pt, weight: "bold")[СОДЕРЖАНИЕ]
+    #text(font: heading-font, size: 14pt, weight: "bold")[
+      #if doc.language == "en" [CONTENTS] else [СОДЕРЖАНИЕ]
+    ]
   ]
   #v(0.8em)
   #outline(title: none, indent: 1.5em, depth: 2)
@@ -169,9 +171,13 @@
 // ── Body ──────────────────────────────────────────────────────────────────────
 #set heading(numbering: "1.1")
 
-#for section in doc.sections {
+#for (si, section) in doc.sections.enumerate() {
   let lvl = section.level
-  if lvl == 1 { heading(level: 1)[#section.title] }
+  if lvl == 1 {
+    heading(level: 1)[#section.title]
+    // метка начала секции для постраничного QC (docs/SPEC_PAGE_FILL.md)
+    context [#metadata(here().position()) <bp-sec>]
+  }
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
@@ -179,9 +185,9 @@
 
   // ГОСТ 7.32: все изображения по центру, подпись под рисунком. Обтекание не
   // применяется. Рисунок вставляется ВНУТРЬ раздела — после абзаца с первым
-  // упоминанием (а не после всего текста), и текст продолжается под ним; иначе
-  // рисунок, не влезший на полосу, уезжает на отдельный полупустой лист.
-  // caption: [] means "Рисунок N" only; [ — text] means "Рисунок N — text"
+  // упоминанием (а не после всего текста), и текст продолжается под ним.
+  // Поддерживает "after:N" (серверная расстановка, этап 3 SPEC_PAGE_FILL.md).
+  // caption: [] → "Рисунок N"; [ — text] → "Рисунок N — text"
   let gost-fig(img) = {
     v(1.0em, weak: true)
     let w = img.at("width", default: "80%")
@@ -189,35 +195,45 @@
     figure(
       image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
       caption: if cap != "" { [ — #cap] } else { [] },
-      supplement: [Рисунок],
+      supplement: if doc.language == "en" { [Figure] } else { [Рисунок] },
     )
     v(1.0em, weak: true)
   }
 
-  if section.images.len() == 0 {
-    eval(safe-content, mode: "markup")
-  } else {
-    let paras = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
-    let imgs  = section.images
-    let n     = imgs.len()
-    let total = paras.len()
-    let cursor = 0
-    for (k, im) in imgs.enumerate() {
-      // Вставка после ~(k+1)/(n+1) долей текста, но не раньше первого абзаца.
-      let cut = calc.max(1, calc.min(total, calc.ceil(total * (k + 1) / (n + 1))))
-      if cut > cursor {
-        eval(paras.slice(cursor, cut).join("\n\n"), mode: "markup")
-        cursor = cut
-      }
-      gost-fig(im)
-    }
-    if cursor < total {
-      eval(paras.slice(cursor).join("\n\n"), mode: "markup")
+  // Делим по абзацам — нужно для меток <bp-para> и after:N.
+  // Inline mark вшивается в конец абзаца; чанк eval'ится через join("\n\n") —
+  // сохраняется оригинальный spacing (не меняет вёрстку).
+  let paras  = safe-content.split("\n\n").map(s => s.trim()).filter(s => s != "")
+  let total  = paras.len()
+  let with-mark(pi) = (
+    paras.at(pi)
+    + "#box(context[#metadata((sec: " + str(si)
+    + ", para: " + str(pi)
+    + ", pos: here().position())) <bp-para>])"
+  )
+  let render-chunk(from, to) = {
+    if from < to {
+      eval(range(from, to).map(with-mark).join("\n\n"), mode: "markup")
     }
   }
+  let imgs   = section.images
+  let n      = imgs.len()
+  let cursor = 0
+  for (k, im) in imgs.enumerate() {
+    let pos-str = im.at("position", default: "auto")
+    let cut = if pos-str.starts-with("after:") {
+      calc.min(total, calc.max(0, int(pos-str.slice(6))))
+    } else {
+      calc.max(1, calc.min(total, calc.ceil(total * (k + 1) / (n + 1))))
+    }
+    render-chunk(cursor, cut)
+    cursor = cut
+    gost-fig(im)
+  }
+  render-chunk(cursor, total)
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }
-  for tbl in section.tables { render-table-gost(tbl) }
+  for tbl in section.tables { render-table-gost(tbl, lang: doc.language) }
   for cb in section.code_blocks { render-code(cb, mono-font) }
   for co in section.callouts { callout-box(co.at("text"), co.kind) }
 }

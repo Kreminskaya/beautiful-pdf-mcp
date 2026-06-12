@@ -1,5 +1,5 @@
 // Technical documentation template — left-aligned, IBM blue, prominent code
-#import "helpers.typ": callout-box, render-table, render-code, render-gallery
+#import "helpers.typ": callout-box, render-table, render-code, render-gallery, render-body-with-marks
 #import "@preview/wrap-it:0.1.1": wrap-content
 
 #let doc = json("assets/content.json")
@@ -109,23 +109,27 @@
 // ── Body ──────────────────────────────────────────────────────────────────────
 #set heading(numbering: "1.1.1")
 
-#for section in doc.sections {
+#for (si, section) in doc.sections.enumerate() {
   let lvl = section.level
-  if lvl == 1 { heading(level: 1)[#section.title] }
+  if lvl == 1 {
+    heading(level: 1)[#section.title]
+    // метка начала секции для постраничного QC (docs/SPEC_PAGE_FILL.md)
+    context [#metadata(here().position()) <bp-sec>]
+  }
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
   let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
-  let body = eval(safe-content, mode: "markup")
 
   let wrap-imgs = section.images.filter(img =>
     img.at("position", default: "center") in ("left-wrap", "right-wrap")
   )
-  let std-imgs = section.images.filter(img =>
+  let flow-imgs = section.images.filter(img =>
     img.at("position", default: "center") not in ("left-wrap", "right-wrap")
   )
 
   if wrap-imgs.len() > 0 {
+    let body = eval(safe-content, mode: "markup")
     let wi = wrap-imgs.first()
     let w  = wi.at("width", default: "40%")
     let side = if wi.at("position", default: "center") == "left-wrap" { left } else { right }
@@ -135,19 +139,28 @@
       supplement: none,
     )
     wrap-content(fig, body, align: side + top, column-gutter: 0.8em)
+    for img in flow-imgs {
+      v(0.9em)
+      let w = img.at("width", default: "100%")
+      figure(
+        image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
+        caption: if img.caption != "" { [#img.caption] } else { none },
+        supplement: none,
+      )
+      v(0.6em)
+    }
   } else {
-    body
-  }
-
-  for img in std-imgs {
-    v(0.9em)
-    let w = img.at("width", default: "100%")
-    figure(
-      image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
-      caption: if img.caption != "" { [#img.caption] } else { none },
-      supplement: none,
-    )
-    v(0.6em)
+    let std-fig = im => {
+      v(0.9em)
+      let w = im.at("width", default: "100%")
+      figure(
+        image(im.at("_local", default: im.path), width: eval(w, mode: "code")),
+        caption: if im.caption != "" { [#im.caption] } else { none },
+        supplement: none,
+      )
+      v(0.6em)
+    }
+    render-body-with-marks(safe-content, flow-imgs, si, std-fig)
   }
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }

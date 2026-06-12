@@ -1,0 +1,57 @@
+{
+  "book:en:4a73de22edb559bc": {
+    "template": "book",
+    "language": "en",
+    "words_per_page": 255,
+    "lines_per_page": 30,
+    "words_per_line": 8.5,
+    "chars_per_line": 53.7,
+    "leading_mm": 4.76,
+    "text_width_mm": 93.0,
+    "type_height_mm": 145.0
+  },
+  "report:ru:97e61e932ca5fa60": {
+    "template": "report",
+    "language": "ru",
+    "words_per_page": 519,
+    "lines_per_page": 36,
+    "words_per_line": 14.4,
+    "chars_per_line": 106.6,
+    "leading_mm": 5.2,
+    "text_width_mm": 160.0,
+    "type_height_mm": 247.0
+  },
+  "journal:en:a8de7170bb0da550": {
+    "template": "journal",
+    "language": "en",
+    "words_per_page": 530,
+    "lines_per_page": 45,
+    "words_per_line": 11.8,
+    "chars_per_line": 74.6,
+    "leading_mm": 5.29,
+    "text_width_mm": 154.0,
+    "type_height_mm": 247.0
+  },
+  "academic_ru:ru:cd686384c0ddcdd3": {
+    "template": "academic_ru",
+    "language": "ru",
+    "words_per_page": 310,
+    "lines_per_page": 34,
+    "words_per_line": 9.1,
+    "chars_per_line": 66.0,
+    "leading_mm": 7.11,
+    "text_width_mm": 165.0,
+    "type_height_mm": 257.0
+  },
+  "technical:en:09b7a7deabcd666a": {
+    "template": "technical",
+    "language": "en",
+    "words_per_page": 684,
+    "lines_per_page": 50,
+    "words_per_line": 13.7,
+    "chars_per_line": 87.4,
+    "leading_mm": 4.76,
+    "text_width_mm": 160.0,
+    "type_height_mm": 247.0
+  }
+}

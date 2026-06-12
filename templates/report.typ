@@ -1,5 +1,5 @@
 // Report template — professional business/academic report
-#import "helpers.typ": callout-box, render-table, render-code, render-gallery
+#import "helpers.typ": callout-box, render-table, render-code, render-gallery, render-body-with-marks
 #import "@preview/wrap-it:0.1.1": wrap-content
 
 #let doc = json("assets/content.json")
@@ -126,24 +126,30 @@
   set heading(numbering: "1.1")
 }
 
-#for section in doc.sections {
+#for (si, section) in doc.sections.enumerate() {
   let lvl = section.level
-  if lvl == 1 { heading(level: 1)[#section.title] }
+  if lvl == 1 {
+    heading(level: 1)[#section.title]
+    // метка начала секции для постраничного QC (docs/SPEC_PAGE_FILL.md)
+    context [#metadata(here().position()) <bp-sec>]
+  }
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
   let safe-content = section.content.replace("#", "\\#").replace("\\#link(", "#link(").replace("\\#footnote[", "#footnote[")
-  let body = eval(safe-content, mode: "markup")
 
-  // Separate wrap-images from standard ones
+  // Wrap images float alongside the body; flow images sit centered in the column.
   let wrap-imgs = section.images.filter(img =>
     img.at("position", default: "center") in ("left-wrap", "right-wrap")
   )
-  let std-imgs = section.images.filter(img =>
+  let flow-imgs = section.images.filter(img =>
     img.at("position", default: "center") not in ("left-wrap", "right-wrap")
   )
 
   if wrap-imgs.len() > 0 {
+    // Wrap case: full body flows around the first wrap image; further wrap images
+    // append inline; flow (center/after:N) images follow at the end.
+    let body = eval(safe-content, mode: "markup")
     let wi = wrap-imgs.first()
     let w  = wi.at("width", default: "40%")
     let side = if wi.at("position", default: "center") == "left-wrap" { left } else { right }
@@ -153,9 +159,8 @@
       supplement: none,
     )
     wrap-content(fig, body, align: side + top, column-gutter: 0.8em)
-    // Any additional wrap-images are placed inline after
     for wi2 in wrap-imgs.slice(1) {
-      let w2   = wi2.at("width", default: "40%")
+      let w2    = wi2.at("width", default: "40%")
       let side2 = if wi2.at("position", default: "center") == "left-wrap" { left } else { right }
       v(0.8em)
       align(side2)[
@@ -166,20 +171,30 @@
         )
       ]
     }
+    for img in flow-imgs {
+      v(0.9em)
+      let w = img.at("width", default: "100%")
+      figure(
+        image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
+        caption: if img.caption != "" { [#img.caption] } else { none },
+        supplement: none,
+      )
+      v(0.6em)
+    }
   } else {
-    body
-  }
-
-  // Standard (centered / full-width) images
-  for img in std-imgs {
-    v(0.9em)
-    let w = img.at("width", default: "100%")
-    figure(
-      image(img.at("_local", default: img.path), width: eval(w, mode: "code")),
-      caption: if img.caption != "" { [#img.caption] } else { none },
-      supplement: none,
-    )
-    v(0.6em)
+    // No wrap images: paragraph-by-paragraph with <bp-para> marks and after:N
+    // interleaving (Stage-3 two-pass pipeline, docs/SPEC_PAGE_FILL.md §3.3).
+    let std-fig = im => {
+      v(0.9em)
+      let w = im.at("width", default: "100%")
+      figure(
+        image(im.at("_local", default: im.path), width: eval(w, mode: "code")),
+        caption: if im.caption != "" { [#im.caption] } else { none },
+        supplement: none,
+      )
+      v(0.6em)
+    }
+    render-body-with-marks(safe-content, flow-imgs, si, std-fig)
   }
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }

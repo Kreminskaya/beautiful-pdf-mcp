@@ -1,7 +1,7 @@
 // Journal template — editorial / magazine layout
 // Wrap images float to the top of their page (placement: top), alternating side-alignment.
 // Explicit position="center" forces a standalone centered float.
-#import "helpers.typ": callout-box, render-table, render-code, render-gallery
+#import "helpers.typ": callout-box, render-table, render-code, render-gallery, render-body-with-marks
 #import "@preview/wrap-it:0.1.1": wrap-content
 #import "@preview/meander:0.4.3"
 
@@ -261,7 +261,11 @@
 
 #for (si, section) in doc.sections.enumerate() {
   let lvl = section.level
-  if lvl == 1 { heading(level: 1)[#section.title] }
+  if lvl == 1 {
+    heading(level: 1)[#section.title]
+    // метка начала секции для постраничного QC (docs/SPEC_PAGE_FILL.md)
+    context [#metadata(here().position()) <bp-sec>]
+  }
   else if lvl == 2 { heading(level: 2)[#section.title] }
   else { heading(level: 3)[#section.title] }
 
@@ -274,7 +278,24 @@
   let center-imgs = section.images.filter(img => resolve-pos(img, auto-side) == "center")
 
   if wrap-imgs.len() == 0 {
-    eval(safe-content, mode: "markup")
+    // No wrap images: paragraph-by-paragraph with <bp-para> marks and after:N
+    // interleaving for any centered/full-width images (Stage-3 pipeline).
+    let jrn-fig = im => {
+      let w   = im.at("width", default: "100%")
+      let cap = im.at("caption", default: "")
+      v(0.7em)
+      align(center)[
+        #image(im.at("_local", default: im.path), width: eval(w, mode: "code"))
+        #if cap != "" [
+          #v(0.25em)
+          #set text(font: heading-font, size: 7pt, fill: muted-color, tracking: 0.06em)
+          #set par(justify: false)
+          #upper(cap)
+        ]
+      ]
+      v(0.7em)
+    }
+    render-body-with-marks(safe-content, center-imgs, si, jrn-fig)
   } else if wrap-imgs.len() == 1 {
     // Single photo: wrap the whole article body around it.
     let wi   = wrap-imgs.first()
@@ -297,20 +318,24 @@
     }
   }
 
-  for img in center-imgs {
-    let w   = img.at("width", default: "100%")
-    let cap = img.at("caption", default: "")
-    v(0.7em)
-    align(center)[
-      #image(img.at("_local", default: img.path), width: eval(w, mode: "code"))
-      #if cap != "" [
-        #v(0.25em)
-        #set text(font: heading-font, size: 7pt, fill: muted-color, tracking: 0.06em)
-        #set par(justify: false)
-        #upper(cap)
+  // center-imgs in the wrap case: render after the wrap block.
+  // In the no-wrap case they are already interleaved by render-body-with-marks above.
+  if wrap-imgs.len() > 0 {
+    for img in center-imgs {
+      let w   = img.at("width", default: "100%")
+      let cap = img.at("caption", default: "")
+      v(0.7em)
+      align(center)[
+        #image(img.at("_local", default: img.path), width: eval(w, mode: "code"))
+        #if cap != "" [
+          #v(0.25em)
+          #set text(font: heading-font, size: 7pt, fill: muted-color, tracking: 0.06em)
+          #set par(justify: false)
+          #upper(cap)
+        ]
       ]
-    ]
-    v(0.7em)
+      v(0.7em)
+    }
   }
 
   for gal in section.at("galleries", default: ()) { render-gallery(gal) }
